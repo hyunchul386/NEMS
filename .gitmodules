@@ -2,3 +2,8 @@
 	path = tests/produtil/NCEPLIBS-pyprodutil
 	url = https://github.com/NOAA-EMC/NCEPLIBS-pyprodutil
 	branch = develop
+[submodule "NEMS"]
+  path = NEMS
+  url = https://github.com/hyunchul386/NEMS
+  branch = feature/bulkflux
+
