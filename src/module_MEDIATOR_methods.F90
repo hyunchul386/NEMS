@@ -509,7 +509,7 @@ SUBROUTINE shr_flux_atmOcn_bf(nMax  ,u10m  ,v10m  ,t2m  ,th2m ,q2m ,   &
    !    deltst = t2m(n) - (ts(n) - 0.012)         ! at 2m t2m:env temp) te(n) 0.012:2m up 
                                                   ! from SST with saturated lapse rate
         delq   = q2m(n) - ssq                     ! spec hum dif (kg/kg)
-   !    alz    = log(zbot(n)/zref) 
+        alz    = log(zbot(n)/zref) 
         cp     = shr_const_cpdair*(1.0_R8 + shr_const_cpvir*ssq) 
    
         !------------------------------------------------------------
