@@ -40,6 +40,9 @@ module module_MEDIATOR
   !              bilinear or path interpolation method is used in the future for regridding
   !              ice variables to other model components, changes in subroutine
   !              "MedPhase_prep_atm" is required. -B Li.
+  ! * 2020-07-14 The bulk formular was updated for using 10m U/V, 2mT and 2mQ,
+  !              instead of estimation from surface fields (serch "LHC2020" in the code
+  !              for the changes) - H-C Lee.
   !-----------------------------------------------------------------------------
 
   use ESMF
