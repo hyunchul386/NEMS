@@ -54,6 +54,9 @@ module module_MEDIATOR
   !              bilinear or path interpolation method is used in the future for regridding
   !              ice variables to other model components, changes in subroutine
   !              "MedPhase_prep_atm" is required. -B Li.
+  ! * 2020-07-14 The bulk formular was updated for using 10m U/V, 2mT and 2mQ,
+  !              instead of estimation from surface fields (serch "LHC2020" in the code
+  !              for the changes) - H-C Lee.
   !-----------------------------------------------------------------------------
 
   use ESMF
@@ -333,197 +336,197 @@ module module_MEDIATOR
     ! the NUOPC mediator component will register the generic methods
     call NUOPC_CompDerive(gcomp, mediator_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=322, file="module_MEDIATOR.F90")) return  ! bail out
+      line=325, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! Provide InitializeP0 to switch from default IPDv00 to IPDv03
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       InitializeP0, phase=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=328, file="module_MEDIATOR.F90")) return  ! bail out
+      line=331, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! IPDv03p1: advertise Fields
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeIPDv03p1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=334, file="module_MEDIATOR.F90")) return  ! bail out
+      line=337, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! IPDv03p3: realize connected Fields with transfer action "provide"
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeIPDv03p3, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=340, file="module_MEDIATOR.F90")) return  ! bail out
+      line=343, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! IPDv03p4: optionally modify the decomp/distr of transferred Grid/Mesh
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeIPDv03p4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=346, file="module_MEDIATOR.F90")) return  ! bail out
+      line=349, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! IPDv03p5: realize all Fields with transfer action "accept"
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeIPDv03p5, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=352, file="module_MEDIATOR.F90")) return  ! bail out
+      line=355, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! attach specializing method(s)
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_DataInitialize, &
       specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=358, file="module_MEDIATOR.F90")) return  ! bail out
+      line=361, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! overwrite Finalize
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, &
       userRoutine=Finalize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=364, file="module_MEDIATOR.F90")) return  ! bail out
+      line=367, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = slow ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_slow"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=371, file="module_MEDIATOR.F90")) return  ! bail out
+      line=374, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_slow", specRoutine=MedPhase_slow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=375, file="module_MEDIATOR.F90")) return  ! bail out
+      line=378, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = fast_before ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_fast_before"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=382, file="module_MEDIATOR.F90")) return  ! bail out
+      line=385, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_fast_before", &
       specRoutine=MedPhase_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=387, file="module_MEDIATOR.F90")) return  ! bail out
+      line=390, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! set entry point for Run( phase = fast_after ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_fast_after"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=394, file="module_MEDIATOR.F90")) return  ! bail out
+      line=397, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_fast_after", &
       specRoutine=MedPhase_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=399, file="module_MEDIATOR.F90")) return  ! bail out
+      line=402, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = accum_fast ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_accum_fast"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=406, file="module_MEDIATOR.F90")) return  ! bail out
+      line=409, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_accum_fast", specRoutine=MedPhase_accum_fast, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=410, file="module_MEDIATOR.F90")) return  ! bail out
+      line=413, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = atm_ocn_flux ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_atm_ocn_flux"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=417, file="module_MEDIATOR.F90")) return  ! bail out
+      line=420, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_atm_ocn_flux", specRoutine=MedPhase_atm_ocn_flux, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=421, file="module_MEDIATOR.F90")) return  ! bail out
+      line=424, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = prep_ocn ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_prep_ocn"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=428, file="module_MEDIATOR.F90")) return  ! bail out
+      line=431, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_prep_ocn", specRoutine=MedPhase_prep_ocn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=432, file="module_MEDIATOR.F90")) return  ! bail out
+      line=435, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = prep_ice ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_prep_ice"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=439, file="module_MEDIATOR.F90")) return  ! bail out
+      line=442, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_prep_ice", specRoutine=MedPhase_prep_ice, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=443, file="module_MEDIATOR.F90")) return  ! bail out
+      line=446, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = prep_atm ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_prep_atm"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=450, file="module_MEDIATOR.F90")) return  ! bail out
+      line=453, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_prep_atm", specRoutine=MedPhase_prep_atm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=454, file="module_MEDIATOR.F90")) return  ! bail out
+      line=457, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
       specPhaseLabel="MedPhase_prep_atm", &
       specRoutine=TimestampExport_prep_atm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=459, file="module_MEDIATOR.F90")) return  ! bail out
+      line=462, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = prep_lnd ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_prep_lnd"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=466, file="module_MEDIATOR.F90")) return  ! bail out
+      line=469, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_prep_lnd", specRoutine=MedPhase_prep_lnd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=470, file="module_MEDIATOR.F90")) return  ! bail out
+      line=473, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = prep_hyd ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_prep_hyd"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=477, file="module_MEDIATOR.F90")) return  ! bail out
+      line=480, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_prep_hyd", specRoutine=MedPhase_prep_hyd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=481, file="module_MEDIATOR.F90")) return  ! bail out
+      line=484, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set entry point for Run( phase = write_restart ) and specialize
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
       phaseLabelList=(/"MedPhase_write_restart"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=488, file="module_MEDIATOR.F90")) return  ! bail out
+      line=491, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
       specPhaseLabel="MedPhase_write_restart", specRoutine=MedPhase_write_restart, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=492, file="module_MEDIATOR.F90")) return  ! bail out
+      line=495, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! attach specializing method(s)
     ! -> NUOPC specializes by default --->>> first need to remove the default
     call ESMF_MethodRemove(gcomp, mediator_label_CheckImport, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=498, file="module_MEDIATOR.F90")) return  ! bail out
+      line=501, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_CheckImport, &
       specRoutine=NUOPC_NoOp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=502, file="module_MEDIATOR.F90")) return  ! bail out
+      line=505, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! attach specializing method(s)
     ! -> NUOPC specializes by default --->>> first need to remove the default
     call ESMF_MethodRemove(gcomp, mediator_label_SetRunClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=508, file="module_MEDIATOR.F90")) return  ! bail out
+      line=511, file="module_MEDIATOR.F90")) return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
       specRoutine=SetRunClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=512, file="module_MEDIATOR.F90")) return  ! bail out
+      line=515, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! AtmOcn Coupling Fields
     call fld_list_add(fldsAtmOcn,"mean_up_lw_flx_ocn"              , "cannot provide","conservefrac")
@@ -576,8 +579,8 @@ module module_MEDIATOR
 
     ! Fields from ATM
 ! LHC 2020
-   !call fld_list_add(fldsFrAtm,"mean_zonal_moment_flx_atm"   , "cannot provide","conservefrac")
-    call fld_list_add(fldsFrAtm,"mean_zonal_moment_flx_atm"   , "will provide","conservefrac")
+    call fld_list_add(fldsFrAtm,"mean_zonal_moment_flx_atm"   , "cannot provide","conservefrac")
+   !call fld_list_add(fldsFrAtm,"mean_zonal_moment_flx_atm"   , "will provide","conservefrac")
     call fld_list_add(fldsFrAtm,"mean_merid_moment_flx_atm"   , "will provide","conservefrac")
     call fld_list_add(fldsFrAtm,"mean_sensi_heat_flx"         , "will provide","conservefrac")
     call fld_list_add(fldsFrAtm,"mean_laten_heat_flx"         , "will provide","conservefrac")
@@ -593,12 +596,12 @@ module module_MEDIATOR
     call fld_list_add(fldsFrAtm,"inst_down_lw_flx"        , "will provide","conservefrac")
 !    call fld_list_add(fldsFrAtm,"inst_up_lw_flx"          , "will provide","conservefrac")
     call fld_list_add(fldsFrAtm,"inst_down_sw_flx"        , "will provide","conservefrac")
-    call fld_list_add(fldsFrAtm,"inst_temp_height2m"      , "will provide","bilinear")
-    call fld_list_add(fldsFrAtm,"inst_spec_humid_height2m", "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_u_wind_height10m"     , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_v_wind_height10m"     , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_zonal_wind_height10m" , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_merid_wind_height10m" , "will provide","bilinear")
+    call fld_list_add(fldsFrAtm,"inst_temp_height2m"      , "will provide","bilinear")
+    call fld_list_add(fldsFrAtm,"inst_spec_humid_height2m", "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_temp_height_surface", "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_pres_height_surface", "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_surface_height"     , "will provide","bilinear")
@@ -924,12 +927,12 @@ module module_MEDIATOR
      call ESMF_LogWrite(trim(subname)//": Verbosity="//trim(value), ESMF_LOGMSG_INFO, rc=dbrc)
     
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=925, file="module_MEDIATOR.F90")) return  ! bail out
+      line=930, file="module_MEDIATOR.F90")) return  ! bail out
     dbug_flag = ESMF_UtilString2Int(value, &
       specialStringList=(/character(4)::"off","low","high","max"/), &
       specialValueList=(/0,1,100,255/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=930, file="module_MEDIATOR.F90")) return  ! bail out
+      line=935, file="module_MEDIATOR.F90")) return  ! bail out
     write(msgString,'(A,i6)') trim(subname)//' dbug_flag = ',dbug_flag
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
 
@@ -942,23 +945,23 @@ module module_MEDIATOR
     call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
       acceptStringList=(/"IPDv03p"/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=943, file="module_MEDIATOR.F90")) return  ! bail out
+      line=948, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_AttributeGet(gcomp, name="restart_interval", value=value, defaultValue="unset", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=948, file="module_MEDIATOR.F90")) return  ! bail out
+      line=953, file="module_MEDIATOR.F90")) return  ! bail out
     restart_interval = ESMF_UtilString2Int(value, &
       specialStringList=(/"unset"/), specialValueList=(/0/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=952, file="module_MEDIATOR.F90")) return  ! bail out
+      line=957, file="module_MEDIATOR.F90")) return  ! bail out
     write(msgString,'(A,i6)') trim(subname)//' restart_interval = ',restart_interval
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
 
     call ESMF_AttributeGet(gcomp, name="coldstart", value=value, defaultValue="false", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=959, file="module_MEDIATOR.F90")) return  ! bail out
+      line=964, file="module_MEDIATOR.F90")) return  ! bail out
     coldstart=(trim(value)=="true")
     write(msgString,'(A,l6)') trim(subname)//' coldstart = ',coldstart
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -966,7 +969,7 @@ module module_MEDIATOR
     call ESMF_AttributeGet(gcomp, name="generate_landmask", value=value, defaultValue="true", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=967, file="module_MEDIATOR.F90")) return  ! bail out
+      line=972, file="module_MEDIATOR.F90")) return  ! bail out
     generate_landmask=(trim(value)=="true")
     write(msgString,'(A,l6)') trim(subname)//' generate_landmask = ',generate_landmask
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -974,7 +977,7 @@ module module_MEDIATOR
     call ESMF_AttributeGet(gcomp, name="DumpFields", value=value, defaultValue="true", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=975, file="module_MEDIATOR.F90")) return  ! bail out
+      line=980, file="module_MEDIATOR.F90")) return  ! bail out
     statewrite_flag=(trim(value)=="true")
     write(msgString,'(A,l6)') trim(subname)//' statewrite_flag = ',statewrite_flag
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -982,7 +985,7 @@ module module_MEDIATOR
     call ESMF_AttributeGet(gcomp, name="DumpRHs", value=value, defaultValue="false", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=983, file="module_MEDIATOR.F90")) return  ! bail out
+      line=988, file="module_MEDIATOR.F90")) return  ! bail out
     rhprint_flag=(trim(value)=="true")
     write(msgString,'(A,l6)') trim(subname)//' rhprint_flag = ',rhprint_flag
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -990,7 +993,7 @@ module module_MEDIATOR
     call ESMF_AttributeGet(gcomp, name="ProfileMemory", value=value, defaultValue="true", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=991, file="module_MEDIATOR.F90")) return  ! bail out
+      line=996, file="module_MEDIATOR.F90")) return  ! bail out
     profile_memory=(trim(value)/="false")
     write(msgString,'(A,l6)') trim(subname)//' profile_memory = ',profile_memory
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -998,7 +1001,7 @@ module module_MEDIATOR
     call ESMF_AttributeGet(gcomp, name="AoMedFlux", value=value, defaultValue="true", &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=999, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1004, file="module_MEDIATOR.F90")) return  ! bail out
     atmocn_flux_from_atm=(trim(value)/="false")
     write(msgString,'(A,l6)') trim(subname)//' atmocn_flux_from_atm = ',atmocn_flux_from_atm
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -1006,14 +1009,14 @@ module module_MEDIATOR
     ! Set clock_invalidTimeStamp
     call ESMF_TimeSet(time_invalidTimeStamp, yy=99999999, mm=1, dd=1, h=0, m=0, s=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1007, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1012, file="module_MEDIATOR.F90")) return  ! bail out
     clock_invalidTimeStamp = ESMF_ClockCreate(clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1010, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1015, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_ClockSet(clock_invalidTimeStamp, currTime=time_invalidTimeStamp, &
       stopTime=time_invalidTimeStamp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1014, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1019, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -1063,7 +1066,7 @@ module module_MEDIATOR
         name=fldsFrAtm%shortname(n), &
         TransferOfferGeomObject=fldsFrAtm%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1064, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1069, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsFrOcn%num
@@ -1077,7 +1080,7 @@ module module_MEDIATOR
         name = fldsFrOcn%shortname(n), &
         TransferOfferGeomObject=fldsFrOcn%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1078, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1083, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsFrIce%num
@@ -1091,7 +1094,7 @@ module module_MEDIATOR
         name = fldsFrIce%shortname(n), &
         TransferOfferGeomObject=fldsFrIce%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1092, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1097, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsFrLnd%num
@@ -1105,7 +1108,7 @@ module module_MEDIATOR
         name = fldsFrLnd%shortname(n), &
         TransferOfferGeomObject=fldsFrLnd%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1106, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1111, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsFrHyd%num
@@ -1119,7 +1122,7 @@ module module_MEDIATOR
         name = fldsFrHyd%shortname(n), &
         TransferOfferGeomObject=fldsFrHyd%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1120, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1125, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
       
     ! exportable fields:
@@ -1135,7 +1138,7 @@ module module_MEDIATOR
         name = fldsToAtm%shortname(n), &
         TransferOfferGeomObject=fldsToAtm%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1136, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1141, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsToOcn%num
@@ -1149,7 +1152,7 @@ module module_MEDIATOR
         name = fldsToOcn%shortname(n), &
         TransferOfferGeomObject=fldsToOcn%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1150, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1155, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsToIce%num
@@ -1163,7 +1166,7 @@ module module_MEDIATOR
         name = fldsToIce%shortname(n), &
         TransferOfferGeomObject=fldsToIce%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1164, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1169, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsToLnd%num
@@ -1177,7 +1180,7 @@ module module_MEDIATOR
         name = fldsToLnd%shortname(n), &
         TransferOfferGeomObject=fldsToLnd%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1178, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1183, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     do n = 1,fldsToHyd%num
@@ -1191,7 +1194,7 @@ module module_MEDIATOR
         name = fldsToHyd%shortname(n), &
         TransferOfferGeomObject=fldsToHyd%transferOffer(n), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1192, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1197, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
 
     if (dbug_flag > 5) then
@@ -1230,12 +1233,12 @@ module module_MEDIATOR
     allocate(is_local%wrap, stat=stat)
     if (ESMF_LogFoundAllocError(statusToCheck=stat, &
       msg="Allocation of the internal state memory failed.", &
-      line=1231, &
+      line=1236, &
       file="module_MEDIATOR.F90")) &
       return  ! bail out
     call ESMF_GridCompSetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1236, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1241, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Initialize the internal state members
     is_local%wrap%fastcntr = 1
@@ -1246,19 +1249,19 @@ module module_MEDIATOR
       maxCornerCoord=(/360._ESMF_KIND_R8, 85._ESMF_KIND_R8/), &
       staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1247, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1252, file="module_MEDIATOR.F90")) return  ! bail out
 
 !    gridLnd = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -85._ESMF_KIND_R8, &
 !      360._ESMF_KIND_R8, 85._ESMF_KIND_R8, nx_med, ny_med, &
 !      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1253, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1258, file="module_MEDIATOR.F90")) return  ! bail out
 
 !    gridHyd = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -85._ESMF_KIND_R8, &
 !      360._ESMF_KIND_R8, 85._ESMF_KIND_R8, nx_med, ny_med, &
 !      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1259, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1264, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Generate RouteHandles
 ! tcx Xgrid
@@ -1267,7 +1270,7 @@ module module_MEDIATOR
 
 !    xgrid = ESMF_XGridCreate(sideAGrid=(/gridatm/), sideBGrid=(/gridocn/), rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1268, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1273, file="module_MEDIATOR.F90")) return  ! bail out
 !    fieldX = ESMF_FieldCreate(xgrid  , typekind=ESMF_TYPEKIND_R8, rc=rc)
 !    fieldA = ESMF_FieldCreate(gridAtm, typekind=ESMF_TYPEKIND_R8, rc=rc)
 !    fieldO = ESMF_FieldCreate(gridAtm, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -1288,7 +1291,7 @@ module module_MEDIATOR
       fieldNameList=fldsFrAtm%shortname(1:fldsFrAtm%num), &
       string='AtmImp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1289, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1294, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Exportable fields to atm:
 
@@ -1296,7 +1299,7 @@ module module_MEDIATOR
       fieldNameList=fldsToAtm%shortname(1:fldsToAtm%num), &
       string='AtmExp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1297, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1302, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Importable fields from ocn:
 
@@ -1304,7 +1307,7 @@ module module_MEDIATOR
       fieldNameList=fldsFrOcn%shortname(1:fldsFrOcn%num), &
       string='OcnImp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1305, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1310, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Exportable fields to ocn:
 
@@ -1312,7 +1315,7 @@ module module_MEDIATOR
       fieldNameList=fldsToOcn%shortname(1:fldsToOcn%num), &
       string='OcnExp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1313, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1318, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Importable fields from ice:
 
@@ -1320,7 +1323,7 @@ module module_MEDIATOR
       fieldNameList=fldsFrIce%shortname(1:fldsFrIce%num), &
       string='IceImp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1321, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1326, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Exportable fields to ice:
 
@@ -1328,7 +1331,7 @@ module module_MEDIATOR
       fieldNameList=fldsToIce%shortname(1:fldsToIce%num), &
       string='IceExp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1329, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1334, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Importable fields from lnd:
 
@@ -1336,7 +1339,7 @@ module module_MEDIATOR
       fieldNameList=fldsFrLnd%shortname(1:fldsFrLnd%num), &
       string='LndImp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1337, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1342, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Exportable fields to lnd:
 
@@ -1344,7 +1347,7 @@ module module_MEDIATOR
       fieldNameList=fldsToLnd%shortname(1:fldsToLnd%num), &
       string='LndExp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1345, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1350, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Importable fields from hyd:
 
@@ -1352,7 +1355,7 @@ module module_MEDIATOR
       fieldNameList=fldsFrHyd%shortname(1:fldsFrHyd%num), &
       string='HydImp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1353, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1358, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- Exportable fields to hyd:
 
@@ -1360,16 +1363,16 @@ module module_MEDIATOR
       fieldNameList=fldsToHyd%shortname(1:fldsToHyd%num), &
       string='HydExp',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1361, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1366, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! Clean Up
 
 !    call ESMF_GridDestroy(gridAtm, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1367, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1372, file="module_MEDIATOR.F90")) return  ! bail out
 !    call ESMF_GridDestroy(gridOcn, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1370, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1375, file="module_MEDIATOR.F90")) return  ! bail out
     
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -1398,11 +1401,11 @@ module module_MEDIATOR
 
           call ESMF_StateGet(state, field=field, itemName=fieldNameList(n), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1399, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1404, file="module_MEDIATOR.F90")) return  ! bail out
           call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1403, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1408, file="module_MEDIATOR.F90")) return  ! bail out
 
           if (trim(transferAction) == "accept") then
             call ESMF_LogWrite(trim(subname)//trim(string)//" field+grid connected "//trim(fieldNameList(n)), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -1412,7 +1415,7 @@ module module_MEDIATOR
             call NUOPC_SetAttribute(field, name="TransferActionGeomObject", &
               value="accept-internal", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1427, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1432, file="module_MEDIATOR.F90")) return  ! bail out
             
           endif   ! transferAction
 
@@ -1422,7 +1425,7 @@ module module_MEDIATOR
           call ESMF_StateRemove(state, (/fieldNameList(n)/), rc=rc)
           call ESMF_LogWrite(trim(subname)//trim(string)//" field NOT connected  "//trim(fieldNameList(n)), ESMF_LOGMSG_INFO, rc=dbrc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1438, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1443, file="module_MEDIATOR.F90")) return  ! bail out
         endif
       enddo
       if (dbug_flag > 5) then
@@ -1466,43 +1469,43 @@ module module_MEDIATOR
 
     call realizeConnectedGrid(NState_atmImp, 'AtmImp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1482, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1487, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_atmExp, 'AtmExp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1486, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1491, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_ocnImp, 'OcnImp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1490, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1495, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_ocnExp, 'OcnExp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1494, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1499, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_iceImp, 'IceImp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1498, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1503, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_iceExp, 'IceExp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1502, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1507, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_lndImp, 'LndImp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1506, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1511, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_lndExp, 'LndExp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1510, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1515, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_hydImp, 'HydImp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1514, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1519, file="module_MEDIATOR.F90")) return  ! bail out
 
     call realizeConnectedGrid(NState_hydExp, 'HydExp', rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1518, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1523, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -1548,27 +1551,27 @@ module module_MEDIATOR
 
       call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1564, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1569, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_StateGet(State, itemCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1568, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1573, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(State, itemNameList=fieldNameList, &
         itemorderflag=ESMF_ITEMORDER_ADDORDER, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1573, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1578, file="module_MEDIATOR.F90")) return  ! bail out
 
       do n=1, fieldCount
 !tcx    do n=1, 1
 
         call ESMF_StateGet(State, field=field, itemName=fieldNameList(n), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1580, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1585, file="module_MEDIATOR.F90")) return  ! bail out
         call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
           value=transferAction, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1584, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1589, file="module_MEDIATOR.F90")) return  ! bail out
 
         if (trim(transferAction) == "accept") then
           if (dbug_flag > 1) then
@@ -1578,17 +1581,17 @@ module module_MEDIATOR
           ! this is still an empty field, but holds a Grid with DistGrid
           call ESMF_FieldGet(field, grid=grid, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1594, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1599, file="module_MEDIATOR.F90")) return  ! bail out
 
           ! diagnostic print
           call Grid_Print(grid,trim(fieldNameList(n))//'_orig',rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1599, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1604, file="module_MEDIATOR.F90")) return  ! bail out
 
           ! access the DistGrid inside the Grid
           call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=1604, file="module_MEDIATOR.F90")) return  ! bail out
+           line=1609, file="module_MEDIATOR.F90")) return  ! bail out
    
           ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
           ! accepted DistGrid, but with a default regDecomp for the current VM
@@ -1598,7 +1601,7 @@ module module_MEDIATOR
           call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
             connectionCount=connectionCount, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1614, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1619, file="module_MEDIATOR.F90")) return  ! bail out
 
           ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
           allocate(minIndexPTile(dimCount, tileCount), &
@@ -1609,7 +1612,7 @@ module module_MEDIATOR
           call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
             maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1625, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1630, file="module_MEDIATOR.F90")) return  ! bail out
           
           if (petCount/tileCount * tileCount == petCount) then
             ! petCount is a multiple of tileCount:
@@ -1619,7 +1622,7 @@ module module_MEDIATOR
             call ESMF_DistGridRegDecompSetCubic(regDecomp, &
               deCount=petCount/tileCount, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1636, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1641, file="module_MEDIATOR.F90")) return  ! bail out
             allocate(regDecompPTile(dimCount,tileCount))
             do i=1, tileCount
               regDecompPTile(:,i) = regDecomp(:)
@@ -1631,7 +1634,7 @@ module module_MEDIATOR
               maxIndexPTile=maxIndexPTile, connectionList=connectionList, &
               regDecompPTile=regDecompPTile, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1648, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1653, file="module_MEDIATOR.F90")) return  ! bail out
             deallocate(regDecomp, regDecompPTile)
           else
             ! petCount is NOT a multiple of tileCount:
@@ -1640,13 +1643,13 @@ module module_MEDIATOR
             distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
               maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1658, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1663, file="module_MEDIATOR.F90")) return  ! bail out
           endif
               
           if (dbug_flag > 1) then
             call ESMF_LogWrite(trim(subname)//trim(string)//': distgrid with connlist', ESMF_LOGMSG_INFO, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1666, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1671, file="module_MEDIATOR.F90")) return  ! bail out
           endif
           
           ! local clean-up
@@ -1656,16 +1659,16 @@ module module_MEDIATOR
           grid = ESMF_GridCreate(distgrid, &
             gridEdgeLWidth=(/0,0/), gridEdgeUWidth=(/0,1/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=1676, file="module_MEDIATOR.F90")) return  ! bail out
+            line=1681, file="module_MEDIATOR.F90")) return  ! bail out
 
           ! check to ensure 1DE/PET condition is satisfied
           call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=1681, file="module_MEDIATOR.F90")) return  ! bail out
+           line=1686, file="module_MEDIATOR.F90")) return  ! bail out
           if (localDeCount /= 1) then
             call ESMF_LogSetError(ESMF_RC_INTNRL_BAD, &
               msg=SUBNAME//": Violation of 1 DE/PET condition in the Mediator",&
-              line=1685, file="module_MEDIATOR.F90", rcToReturn=rc)
+              line=1690, file="module_MEDIATOR.F90", rcToReturn=rc)
             return  ! bail out
           endif
           
@@ -1677,18 +1680,18 @@ module module_MEDIATOR
             call ESMF_StateGet(State, field=field, &
               itemName=fieldNameList(n1), rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1697, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1702, file="module_MEDIATOR.F90")) return  ! bail out
             call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1700, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1705, file="module_MEDIATOR.F90")) return  ! bail out
             if (dbug_flag > 1) then
               call ESMF_LogWrite(trim(subname)//trim(string)//": attach grid for "//trim(fieldNameList(n1)), ESMF_LOGMSG_INFO, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=1704, file="module_MEDIATOR.F90")) return  ! bail out
+                line=1709, file="module_MEDIATOR.F90")) return  ! bail out
             endif
             call Grid_print(grid,trim(fieldNameList(n))//'_new',rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=1708, file="module_MEDIATOR.F90")) return  ! bail out
+              line=1713, file="module_MEDIATOR.F90")) return  ! bail out
           enddo
 
         else
@@ -1749,73 +1752,73 @@ module module_MEDIATOR
 
     call completeFieldInitialization(NState_atmImp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1769, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1774, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_atmImp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1772, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1777, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_atmExp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1776, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1781, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_atmExp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1779, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1784, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_ocnImp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1783, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1788, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_ocnImp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1786, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1791, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_ocnExp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1790, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1795, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_ocnExp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1793, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1798, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_iceImp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1797, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1802, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_iceImp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1800, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1805, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_iceExp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1804, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1809, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_iceExp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1807, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1812, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_lndImp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1811, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1816, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_lndImp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1814, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1819, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_lndExp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1818, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1823, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_lndExp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1821, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1826, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_hydImp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1825, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1830, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_hydImp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1828, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1833, file="module_MEDIATOR.F90")) return  ! bail out
 
     call completeFieldInitialization(NState_hydExp, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1832, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1837, file="module_MEDIATOR.F90")) return  ! bail out
     call state_reset(NState_hydExp, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1835, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1840, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     !--- Set the model grids using first field in each model's import state
@@ -1824,34 +1827,34 @@ module module_MEDIATOR
 !tcraig old version
 !    call ESMF_StateGet(NState_atmImp, field=field, itemName=fldsFrAtm%shortname(1), rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1844, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1849, file="module_MEDIATOR.F90")) return  ! bail out
 
 !    call ESMF_FieldGet(field, grid=gridAtm, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1848, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1853, file="module_MEDIATOR.F90")) return  ! bail out
 
 !    call ESMF_StateGet(NState_ocnImp, field=field, itemName=fldsFrOcn%shortname(1), rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1852, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1857, file="module_MEDIATOR.F90")) return  ! bail out
 
 !    call ESMF_FieldGet(field, grid=gridOcn, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=1856, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=1861, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_StateGet(NState_atmImp, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1860, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1865, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(NState_atmImp, itemNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1865, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1870, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_StateGet(NState_atmImp, field=field, itemName=fieldNameList(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1868, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1873, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldGet(field, grid=gridAtm, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1871, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1876, file="module_MEDIATOR.F90")) return  ! bail out
       deallocate(fieldNameList)
 
 !jwtest
@@ -1866,18 +1869,18 @@ module module_MEDIATOR
 
     call ESMF_StateGet(NState_ocnImp, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1886, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1891, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(NState_ocnImp, itemNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1891, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1896, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_StateGet(NState_ocnImp, field=field, itemName=fieldNameList(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1894, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1899, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldGet(field, grid=gridOcn, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1897, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1902, file="module_MEDIATOR.F90")) return  ! bail out
       deallocate(fieldNameList)
     else
       gridOcn = gridMed
@@ -1885,18 +1888,18 @@ module module_MEDIATOR
 
     call ESMF_StateGet(NState_iceImp, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1905, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1910, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(NState_iceImp, itemNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1910, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1915, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_StateGet(NState_iceImp, field=field, itemName=fieldNameList(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1913, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1918, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldGet(field, grid=gridIce, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1916, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1921, file="module_MEDIATOR.F90")) return  ! bail out
       deallocate(fieldNameList)
     else
       gridIce = gridMed
@@ -1906,28 +1909,28 @@ module module_MEDIATOR
 
     call ESMF_StateGet(NState_lndExp, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1926, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1931, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(NState_lndExp, itemNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1931, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1936, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_StateGet(NState_lndExp, field=field, itemName=fieldNameList(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1934, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1939, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldGet(field, grid=gridLnd, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1937, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1942, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_GridGetCoord(gridLnd, staggerloc=ESMF_STAGGERLOC_CENTER, &
         isPresent=isPresent,rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1942, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1947, file="module_MEDIATOR.F90")) return  ! bail out
       if (.NOT. isPresent) then
         call NEMS_GridCopyCoord(gridcomp=gcomp, gridSrc=gridAtm, gridDst=gridLnd, &
           staggerloc=(/ESMF_STAGGERLOC_CENTER/), invert=(/2/), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1947, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1952, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_LogWrite(trim(subname)// &
           ": Copied gridATM center coordinates to gridLnd", ESMF_LOGMSG_INFO, rc=dbrc)
       endif
@@ -1935,18 +1938,18 @@ module module_MEDIATOR
       call ESMF_GridGetCoord(gridLnd, staggerloc=ESMF_STAGGERLOC_CORNER, &
         isPresent=isPresent,rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1955, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1960, file="module_MEDIATOR.F90")) return  ! bail out
       if (.NOT. isPresent) then
         call NEMS_GridCopyCoord(gridcomp=gcomp, gridSrc=gridAtm, gridDst=gridLnd, &
           staggerloc=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), invert=(/2/), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1960, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1965, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_LogWrite(trim(subname)// &
           ": Copied gridATM center and corner coordinates to gridLnd", ESMF_LOGMSG_INFO, rc=dbrc)
         call NEMS_GridCopyItem(gridcomp=gcomp, gridSrc=gridAtm, gridDst=gridLnd, &
           item=(/ESMF_GRIDITEM_AREA/), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=1966, file="module_MEDIATOR.F90")) return  ! bail out
+          line=1971, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_LogWrite(trim(subname)// &
           ": Copied gridATM areas to gridLnd", ESMF_LOGMSG_INFO, rc=dbrc)
       endif
@@ -1959,18 +1962,18 @@ module module_MEDIATOR
 
     call ESMF_StateGet(NState_hydExp, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=1979, file="module_MEDIATOR.F90")) return  ! bail out
+      line=1984, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(NState_hydExp, itemNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1984, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1989, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_StateGet(NState_hydExp, field=field, itemName=fieldNameList(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1987, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1992, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldGet(field, grid=gridHyd, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=1990, file="module_MEDIATOR.F90")) return  ! bail out
+        line=1995, file="module_MEDIATOR.F90")) return  ! bail out
       deallocate(fieldNameList)
     else
       gridHyd = gridMed
@@ -1981,9 +1984,9 @@ module module_MEDIATOR
     if (generate_landmask) then
 
       call ESMF_GridGetItem(gridOcn, itemflag=ESMF_GRIDITEM_MASK, staggerLoc=ESMF_STAGGERLOC_CENTER, isPresent=isPresentOcn, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2001, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2006, file="module_MEDIATOR.F90")) return
       call ESMF_GridGetItem(gridIce, itemflag=ESMF_GRIDITEM_MASK, staggerLoc=ESMF_STAGGERLOC_CENTER, isPresent=isPresentIce, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2003, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2008, file="module_MEDIATOR.F90")) return
 
       if (isPresentOcn .or. isPresentIce) then
 
@@ -1992,48 +1995,48 @@ module module_MEDIATOR
           ! ocn mask from ocn grid
 
           call ESMF_GridGetItem(gridOcn, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_MASK, array=arrayOcn, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2012, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2017, file="module_MEDIATOR.F90")) return
           call ESMF_GridGetItem(gridOcn, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_MASK, farrayPtr=dataPtr_arrayOcn, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2014, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2019, file="module_MEDIATOR.F90")) return
           call ESMF_ArraySet(arrayOcn, name="ocean_mask", rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2016, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2021, file="module_MEDIATOR.F90")) return
           write (msgString,*) trim(subname)//"ocn_mask raw = ",minval(dataPtr_arrayOcn),maxval(dataPtr_arrayOcn)
           call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
           call ESMF_ArrayWrite(arrayOcn, 'field_med_ocn_a_ocean_mask.nc', rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2020, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2025, file="module_MEDIATOR.F90")) return
 
           ! ice mask from ice grid
 
           call ESMF_GridGetItem(gridIce, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_MASK, array=arrayIce, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2025, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2030, file="module_MEDIATOR.F90")) return
           call ESMF_GridGetItem(gridIce, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_MASK, farrayPtr=dataPtr_arrayIce, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2027, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2032, file="module_MEDIATOR.F90")) return
           call ESMF_ArraySet(arrayIce, name="ice_mask", rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2029, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2034, file="module_MEDIATOR.F90")) return
           write (msgString,*) trim(subname)//"ice_mask raw = ",minval(dataPtr_arrayIce),maxval(dataPtr_arrayIce)
           call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
           call ESMF_ArrayWrite(arrayIce, 'field_med_ocn_a_ice_mask.nc', rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2033, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2038, file="module_MEDIATOR.F90")) return
 
           ! generate ocn grid with just coords, no mask or area
           ! create ocn/ice mask field on ocn grid, coords only
 
           call Grid_CreateCoords(gridOcnCoord, gridOcn, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2039, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2044, file="module_MEDIATOR.F90")) return
           fieldOcn = ESMF_FieldCreate(gridOcnCoord, ESMF_TYPEKIND_R8, name='ocnice_mask', rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2041, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2046, file="module_MEDIATOR.F90")) return
           call ESMF_FieldGet(fieldOcn, farrayPtr=dataPtr_fieldOcn, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2043, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2048, file="module_MEDIATOR.F90")) return
 
           ! generate atm grid with just coords, no mask or area
           ! create land mask field on atm grid, coords only
 
           call Grid_CreateCoords(gridAtmCoord, gridAtm, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2049, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2054, file="module_MEDIATOR.F90")) return
           fieldAtm = ESMF_FieldCreate(gridAtmCoord, ESMF_TYPEKIND_R8, name='land_mask', rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2051, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2056, file="module_MEDIATOR.F90")) return
           call ESMF_FieldGet(fieldAtm, farrayPtr=dataPtr_FieldAtm, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2053, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2058, file="module_MEDIATOR.F90")) return
 
           ! Here, the ocean/ice mask is the intersection of ocean and ice masks, which are integer fields of 0 or 1
           ! Convert to real and make sure values are only 0 or 1.
@@ -2057,7 +2060,7 @@ module module_MEDIATOR
             srcTermProcessing=srcTermProcessing_Value, &
             ignoreDegenerate=.true., &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2077, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2082, file="module_MEDIATOR.F90")) return
 
           ! regrid ocean mask from ocn to atm grid using unmasked conservative mapping
 
@@ -2065,9 +2068,9 @@ module module_MEDIATOR
             dataPtr_fieldAtm = 0.0_ESMF_KIND_R8
             call ESMF_FieldRegrid(fieldOcn, fieldAtm, routehandle=RH_mapmask, &
               termorderflag=ESMF_TERMORDER_SRCSEQ, zeroregion=ESMF_REGION_TOTAL, rc=rc)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2085, file="module_MEDIATOR.F90")) return
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2090, file="module_MEDIATOR.F90")) return
             call ESMF_FieldRegridRelease(RH_mapmask, rc=rc)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2087, file="module_MEDIATOR.F90")) return
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=2092, file="module_MEDIATOR.F90")) return
           else
             call ESMF_LogWrite(trim(subname)//": ERROR RH_mapmask not created", ESMF_LOGMSG_INFO, rc=rc)
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -2091,24 +2094,24 @@ module module_MEDIATOR
           ! write out masks
 
           call ESMF_FieldWrite(fieldOcn,'field_med_ocn_a_ocnice_mask.nc',overwrite=.true.,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2111, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2116, file="module_MEDIATOR.F90")) return
           write (msgString,*) trim(subname)//"ocean_mask = ",minval(dataPtr_fieldOcn),maxval(dataPtr_fieldOcn)
           call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
           call ESMF_FieldWrite(fieldAtm,'field_med_atm_a_land_mask.nc',overwrite=.true.,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2117, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2122, file="module_MEDIATOR.F90")) return
           write (msgString,*) trim(subname)//"land_mask = ",minval(dataPtr_fieldAtm),maxval(dataPtr_fieldAtm)
           call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
           ! clean up
 
           call ESMF_GridDestroy(gridAtmCoord,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2124, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2129, file="module_MEDIATOR.F90")) return
           call ESMF_FieldDestroy(fieldAtm,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2126, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2131, file="module_MEDIATOR.F90")) return
           call ESMF_GridDestroy(gridOcnCoord,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2128, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2133, file="module_MEDIATOR.F90")) return
           call ESMF_FieldDestroy(fieldOcn,rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2130, file="module_MEDIATOR.F90")) return
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=2135, file="module_MEDIATOR.F90")) return
 
         else  ! isPresentOcn .and. isPresentIce
           call ESMF_LogWrite(trim(subname)//": ABORT more support needed for Ocn or Ice mask", ESMF_LOGMSG_INFO, rc=rc)
@@ -2139,27 +2142,27 @@ module module_MEDIATOR
 
     call Grid_Print(gridAtm,'gridAtm',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2161, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2166, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Print(gridOcn,'gridOcn',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2165, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2170, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Print(gridIce,'gridIce',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2169, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2174, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Print(gridLnd,'gridLnd',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2173, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2178, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Print(gridHyd,'gridHyd',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2177, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2182, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Print(gridMed,'gridMed',rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2181, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2186, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     ! dump the Grid coordinate arrays for reference      
@@ -2167,27 +2170,27 @@ module module_MEDIATOR
 
     call Grid_Write(gridAtm, 'array_med_atm', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2191, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2196, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Write(gridOcn, 'array_med_ocn', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2196, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2201, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Write(gridIce, 'array_med_ice', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2200, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2205, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Write(gridLnd, 'array_med_lnd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2204, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2209, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Write(gridHyd, 'array_med_hyd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2208, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2213, file="module_MEDIATOR.F90")) return  ! bail out
 
     call Grid_Write(gridMed, 'array_med_med', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2212, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2217, file="module_MEDIATOR.F90")) return  ! bail out
 
 
     !----------------------------------------------------------
@@ -2198,7 +2201,7 @@ module module_MEDIATOR
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2224, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2229, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     ! Initialize FB for each model import states on each grid
@@ -2209,37 +2212,37 @@ module module_MEDIATOR
     call fieldBundle_init(is_local%wrap%FBAtm_a, grid=gridAtm, &
       state=NState_AtmImp, name='FBAtm_a', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2235, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2240, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm_o, grid=gridOcn, &
       state=NState_AtmImp, name='FBAtm_o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2240, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2245, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm2_o, grid=gridOcn, &
       state=NState_AtmImp, name='FBAtm2_o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2245, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2250, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm_i, grid=gridIce, &
       state=NState_AtmImp, name='FBAtm_i', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2250, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2255, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm2_i, grid=gridIce, &
       state=NState_AtmImp, name='FBAtm2_i', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2255, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2260, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm_l, grid=gridLnd, &
       state=NState_AtmImp, name='FBAtm_l', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2260, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2265, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBAtm_h, grid=gridHyd, &
       state=NState_AtmImp, name='FBAtm_h', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2265, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2270, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- ocn
 
@@ -2250,17 +2253,17 @@ module module_MEDIATOR
       state=NState_OcnImp, name='FBOcn2_a', rc=rc)
 !BL2017b
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2276, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2281, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBOcn_o, grid=gridOcn, &
       state=NState_OcnImp, name='FBOcn_o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2281, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2286, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBOcn_i, grid=gridIce, &
       state=NState_OcnImp, name='FBOcn_i', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2286, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2291, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- ice
 
@@ -2271,56 +2274,56 @@ module module_MEDIATOR
       state=NState_IceImp, name='FBIce2_a', rc=rc)
 !BL2017b
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2297, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2302, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBIce_o, grid=gridOcn, &
       state=NState_IceImp, name='FBIce_o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2302, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2307, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBIce_i, grid=gridIce, &
       state=NState_IceImp, name='FBIce_i', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2307, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2312, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBIce_if, grid=gridIce, &
       state=NState_IceImp, name='FBIce_if', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2312, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2317, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- lnd
 
     call fieldBundle_init(is_local%wrap%FBLnd_a, grid=gridAtm, &
       state=NState_LndImp, name='FBLnd_a', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2319, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2324, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBLnd_l, grid=gridLnd, &
       state=NState_LndImp, name='FBLnd_l', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2324, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2329, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBLnd_h, grid=gridHyd, &
       state=NState_LndImp, name='FBLnd_h', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2329, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2334, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- hyd
 
     call fieldBundle_init(is_local%wrap%FBHyd_l, grid=gridLnd, &
       state=NState_HydImp, name='FBHyd_l', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2336, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2341, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBHyd_a, grid=gridAtm, &
       state=NState_HydImp, name='FBHyd_a', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2341, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2346, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBHyd_h, grid=gridHyd, &
       state=NState_HydImp, name='FBHyd_h', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2346, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2351, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     ! Initialize Accumulators
@@ -2329,27 +2332,27 @@ module module_MEDIATOR
     call fieldBundle_init(is_local%wrap%FBaccumAtm, grid=gridAtm, &
       state=NState_AtmImp, name='FBaccumAtm', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2355, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2360, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBaccumOcn, grid=gridOcn, &
       state=NState_OcnImp, name='FBaccumOcn', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2360, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2365, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBaccumIce, grid=gridIce, &
       state=NState_IceImp, name='FBaccumIce', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2365, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2370, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBaccumLnd, grid=gridLnd, &
       state=NState_LndImp, name='FBaccumLnd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2370, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2375, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBaccumHyd, grid=gridHyd, &
       state=NState_HydImp, name='FBaccumHyd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2375, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2380, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     ! Initialize AtmOcn FBs
@@ -2358,7 +2361,7 @@ module module_MEDIATOR
     call fieldBundle_init(is_local%wrap%FBAtmOcn_o, grid=gridOcn, &
       fieldnamelist=fldsAtmOcn%shortname(1:fldsAtmOcn%num), name='FBAtmOcn_o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2384, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2389, file="module_MEDIATOR.F90")) return  ! bail out
 
     !call fieldBundle_init(is_local%wrap%FBAtmOcn_a, grid=gridAtm, &
     !  fieldnamelist=fldsAtmOcn%shortname(1:fldsAtmOcn%num), name='FBAtmOcn_a', rc=rc)
@@ -2367,12 +2370,12 @@ module module_MEDIATOR
     !  fieldnamelist=fldsAtmOcn%shortname(1:fldsAtmOcn%num), name='FBAtmOcn2_a', rc=rc)
 !BL2017b
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2393, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2398, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBaccumAtmOcn, grid=gridOcn, &
       fieldnamelist=fldsAtmOcn%shortname(1:fldsAtmOcn%num), name='FBaccumAtmOcn', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2398, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2403, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     ! Initialize FB for export to models
@@ -2381,27 +2384,27 @@ module module_MEDIATOR
     call fieldBundle_init(is_local%wrap%FBforAtm, &
       state=NState_AtmExp, name='FBforAtm', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2407, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2412, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBforOcn, &
       state=NState_OcnExp, name='FBforOcn', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2412, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2417, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBforIce, &
       state=NState_IceExp, name='FBforIce', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2417, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2422, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBforLnd, &
       state=NState_LndExp, name='FBforLnd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2422, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2427, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_init(is_local%wrap%FBforHyd, &
       state=NState_HydExp, name='FBforHyd', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2427, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2432, file="module_MEDIATOR.F90")) return  ! bail out
 
     !----------------------------------------------------------
     !--- Check for active regrid directions
@@ -2424,29 +2427,29 @@ module module_MEDIATOR
     ! a2o, a2i, a2l, a2h
     call ESMF_FieldBundleGet(is_local%wrap%FBAtm_a, fieldCount=fieldCount, rc=rc) ! Atmosphere Export Field Count
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2450, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2455, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       call ESMF_FieldBundleGet(is_local%wrap%FBforOcn, fieldCount=fieldCount, rc=rc) ! Ocean Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2454, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2459, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%a2o_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforIce, fieldCount=fieldCount, rc=rc) ! Ice Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2460, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2465, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%a2i_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforLnd, fieldCount=fieldCount, rc=rc) ! Land Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2466, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2471, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%a2l_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforHyd, fieldCount=fieldCount, rc=rc) ! Hydro Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2472, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2477, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%a2h_active = .true.
       endif
@@ -2455,17 +2458,17 @@ module module_MEDIATOR
     ! o2a, o2i
     call ESMF_FieldBundleGet(is_local%wrap%FBOcn_o, fieldCount=fieldCount, rc=rc) ! Ocean Export Field Count
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2481, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2486, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       call ESMF_FieldBundleGet(is_local%wrap%FBforAtm, fieldCount=fieldCount, rc=rc) ! Atmosphere Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2485, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2490, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%o2a_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforIce, fieldCount=fieldCount, rc=rc) ! Ice Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2491, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2496, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%o2i_active = .true.
       endif
@@ -2474,17 +2477,17 @@ module module_MEDIATOR
     ! i2a, i2o
     call ESMF_FieldBundleGet(is_local%wrap%FBIce_i, fieldCount=fieldCount, rc=rc) ! Ice Export Field Count
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2500, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2505, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       call ESMF_FieldBundleGet(is_local%wrap%FBforAtm, fieldCount=fieldCount, rc=rc) ! Atmosphere Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2504, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2509, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%i2a_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforOcn, fieldCount=fieldCount, rc=rc) ! Ocean Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2510, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2515, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%i2o_active = .true.
       endif
@@ -2493,17 +2496,17 @@ module module_MEDIATOR
     ! l2a, l2h
     call ESMF_FieldBundleGet(is_local%wrap%FBLnd_l, fieldCount=fieldCount, rc=rc) ! Land Export Field Count
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2519, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2524, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       call ESMF_FieldBundleGet(is_local%wrap%FBforAtm, fieldCount=fieldCount, rc=rc) ! Atmosphere Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2523, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2528, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%l2a_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforHyd, fieldCount=fieldCount, rc=rc) ! Hyd Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2529, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2534, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%l2h_active = .true.
       endif
@@ -2512,17 +2515,17 @@ module module_MEDIATOR
     ! h2l, h2a
     call ESMF_FieldBundleGet(is_local%wrap%FBHyd_h, fieldCount=fieldCount, rc=rc) ! Hydro Export Field Count
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2538, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2543, file="module_MEDIATOR.F90")) return  ! bail out
     if (fieldCount > 0) then
       call ESMF_FieldBundleGet(is_local%wrap%FBforLnd, fieldCount=fieldCount, rc=rc) ! Land Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2542, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2547, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%h2l_active = .true.
       endif
       call ESMF_FieldBundleGet(is_local%wrap%FBforAtm, fieldCount=fieldCount, rc=rc) ! Atmosphere Import Field Count
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2548, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2553, file="module_MEDIATOR.F90")) return  ! bail out
       if (fieldCount > 0) then
         is_local%wrap%h2a_active = .true.
       endif
@@ -2578,7 +2581,7 @@ module module_MEDIATOR
         dstMaskValue=0, &
         fldlist1=FldsFrAtm, string='a2o_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2604, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2609, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%a2i_active) then
@@ -2593,7 +2596,7 @@ module module_MEDIATOR
         dstMaskValue=0, &
         fldlist1=FldsFrAtm, string='a2i_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2619, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2624, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%a2l_active) then
@@ -2605,7 +2608,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_a2l_fcopy, &
         fldlist1=FldsFrAtm, string='a2l_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2631, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2636, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%a2h_active) then
@@ -2617,7 +2620,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_a2h_fcopy, &
         fldlist1=FldsFrAtm, string='a2h_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2643, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2648, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%o2a_active) then
@@ -2632,7 +2635,7 @@ module module_MEDIATOR
         dstMaskValue=1, &
         fldlist1=FldsFrOcn, fldlist2=FldsAtmOcn, string='o2a_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2658, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2663, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%o2i_active) then
@@ -2645,7 +2648,7 @@ module module_MEDIATOR
         srcMaskValue=0, dstMaskValue=0, &
         fldlist1=FldsFrOcn, string='o2i_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2671, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2676, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%i2a_active) then
@@ -2660,7 +2663,7 @@ module module_MEDIATOR
         dstMaskValue=1, &
         fldlist1=FldsFrIce, string='i2a_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2686, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2691, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%i2o_active) then
@@ -2673,7 +2676,7 @@ module module_MEDIATOR
         srcMaskValue=0, dstMaskValue=0, &
         fldlist1=FldsFrIce, string='i2o_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2699, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2704, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%l2a_active) then
@@ -2685,7 +2688,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_l2a_fcopy, &
         fldlist1=FldsFrLnd, string='l2a_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2711, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2716, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%l2h_active) then
@@ -2697,7 +2700,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_l2h_fcopy, &
         fldlist1=FldsFrLnd, string='l2h_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2723, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2728, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%h2a_active) then
@@ -2709,7 +2712,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_h2a_fcopy, &
         fldlist1=FldsFrHyd, string='h2a_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2735, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2740, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%h2l_active) then
@@ -2721,7 +2724,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_h2l_fcopy, &
         fldlist1=FldsFrHyd, string='h2l_weights', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2747, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2752, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 5) then
@@ -2750,59 +2753,59 @@ module module_MEDIATOR
 
       call ESMF_StateGet(State, itemCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2778, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2783, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(fieldNameList(fieldCount))
       call ESMF_StateGet(State, itemNameList=fieldNameList, &
         itemorderflag=ESMF_ITEMORDER_ADDORDER, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2783, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2788, file="module_MEDIATOR.F90")) return  ! bail out
 
       do n=1, fieldCount
 
         call ESMF_StateGet(State, field=field, itemName=fieldNameList(n), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=2789, file="module_MEDIATOR.F90")) return  ! bail out
+          line=2794, file="module_MEDIATOR.F90")) return  ! bail out
 
         call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=2793, file="module_MEDIATOR.F90")) return  ! bail out
+          line=2798, file="module_MEDIATOR.F90")) return  ! bail out
 
         if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then 
           if (dbug_flag > 1) then
             call ESMF_LogWrite(subname//" is accepting grid for field "//trim(fieldNameList(n)), &
               ESMF_LOGMSG_INFO, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=2800, file="module_MEDIATOR.F90")) return  ! bail out
+              line=2805, file="module_MEDIATOR.F90")) return  ! bail out
           endif
           ! the transferred Grid is already set, allocate field data memory
           ! DCR - The WRFHYDRO soil fields have an ungridded 3rd dimension.
           ! The ESMF_FieldEmptyComplete is not allocating memory for this 3rd dimension
           call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2807, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2812, file="module_MEDIATOR.F90")) return  ! bail out
           ! access the transferred Grid to use for other fields
           call ESMF_FieldGet(field, grid=grid, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2812, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2817, file="module_MEDIATOR.F90")) return  ! bail out
         else
           if (dbug_flag > 1) then
             call ESMF_LogWrite(subname//" is accepting INTERNAL grid for field "//trim(fieldNameList(n)), &
               ESMF_LOGMSG_INFO, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=2818, file="module_MEDIATOR.F90")) return  ! bail out
+              line=2823, file="module_MEDIATOR.F90")) return  ! bail out
           endif
           ! now use the Grid object in other fields
           call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2823, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2828, file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2826, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2831, file="module_MEDIATOR.F90")) return  ! bail out
         endif   ! accept
 
         call FldGrid_Print(field,fieldNameList(n),rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=2832, file="module_MEDIATOR.F90")) return  ! bail out
+          line=2837, file="module_MEDIATOR.F90")) return  ! bail out
 
       enddo
 
@@ -2843,18 +2846,18 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2873, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2878, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2879, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2884, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! get the current time out of the clock
     call ESMF_ClockGet(clock, currTime=time, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=2884, file="module_MEDIATOR.F90")) return  ! bail out
+      line=2889, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! initialze cumulative flag
     allDone = .true.  ! reset if an item is found that is not done
@@ -2864,32 +2867,32 @@ module module_MEDIATOR
       call ESMF_StateGet(NState_AtmImp, itemName=fldsFrAtm%shortname(n), &
         itemType=itemType, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2894, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2899, file="module_MEDIATOR.F90")) return  ! bail out
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
         connected = NUOPC_IsConnected(NState_AtmImp, &
           fieldName=fldsFrAtm%shortname(n), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=2899, file="module_MEDIATOR.F90")) return  ! bail out
+          line=2904, file="module_MEDIATOR.F90")) return  ! bail out
         if (connected) then
           call ESMF_StateGet(NState_AtmImp, itemName=fldsFrAtm%shortname(n), &
             field=field, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2904, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2909, file="module_MEDIATOR.F90")) return  ! bail out
           atCorrectTime = NUOPC_IsAtTime(field, time, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=2907, file="module_MEDIATOR.F90")) return  ! bail out
+            line=2912, file="module_MEDIATOR.F90")) return  ! bail out
           if (.not.atCorrectTime) then
             call ESMF_LogWrite("MED - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
               ESMF_LOGMSG_INFO, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=2912, file="module_MEDIATOR.F90")) return  ! bail out
+              line=2917, file="module_MEDIATOR.F90")) return  ! bail out
             allDone = .false.
             exit  ! break out of the loop when first not satisfied found
           else
             call ESMF_LogWrite("MED - Initialize-Data-Dependency SATISFIED!!!", &
               ESMF_LOGMSG_INFO, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=2919, file="module_MEDIATOR.F90")) return  ! bail out
+              line=2924, file="module_MEDIATOR.F90")) return  ! bail out
           endif
         endif
       endif
@@ -2904,7 +2907,7 @@ module module_MEDIATOR
       call NUOPC_CompAttributeSet(gcomp, &
         name="InitializeDataComplete", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2934, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2939, file="module_MEDIATOR.F90")) return  ! bail out
 
       ! gjt: The above code ensures that the MED has initial conditions from ATM.
     
@@ -2916,47 +2919,47 @@ module module_MEDIATOR
           
       call state_reset(NState_atmImp, value=spval_init, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2946, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2951, file="module_MEDIATOR.F90")) return  ! bail out
 
       call state_reset(NState_ocnImp, value=spval_init, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2950, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2955, file="module_MEDIATOR.F90")) return  ! bail out
 
       call state_reset(NState_iceImp, value=spval_init, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2954, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2959, file="module_MEDIATOR.F90")) return  ! bail out
 
       call state_reset(NState_lndImp, value=spval_init, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2958, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2963, file="module_MEDIATOR.F90")) return  ! bail out
 
       call state_reset(NState_hydImp, value=spval_init, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2962, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2967, file="module_MEDIATOR.F90")) return  ! bail out
 
       call fieldBundle_reset(is_local%wrap%FBaccumAtm, value=czero, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2966, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2971, file="module_MEDIATOR.F90")) return  ! bail out
       is_local%wrap%accumcntAtm = 0
 
       call fieldBundle_reset(is_local%wrap%FBaccumOcn, value=czero, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2971, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2976, file="module_MEDIATOR.F90")) return  ! bail out
       is_local%wrap%accumcntOcn = 0
 
       call fieldBundle_reset(is_local%wrap%FBaccumIce, value=czero, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2976, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2981, file="module_MEDIATOR.F90")) return  ! bail out
       is_local%wrap%accumcntIce = 0
 
       call fieldBundle_reset(is_local%wrap%FBaccumLnd, value=czero, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2981, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2986, file="module_MEDIATOR.F90")) return  ! bail out
       is_local%wrap%accumcntLnd = 0
 
       call fieldBundle_reset(is_local%wrap%FBaccumHyd, value=czero, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=2986, file="module_MEDIATOR.F90")) return  ! bail out
+        line=2991, file="module_MEDIATOR.F90")) return  ! bail out
       is_local%wrap%accumcntHyd = 0
 
       !---------------------------------------
@@ -2967,21 +2970,21 @@ module module_MEDIATOR
       !if (.not.coldstart) then
         call Mediator_restart(gcomp,'read','mediator',rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=2997, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3002, file="module_MEDIATOR.F90")) return  ! bail out
       !endif
 
       ! default initialize s_surf to work around limitations of current initialization sequence
       call ESMF_StateGet(NState_IceExp, itemName='s_surf', &
         itemType=itemType, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3004, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3009, file="module_MEDIATOR.F90")) return  ! bail out
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
         if (NUOPC_IsConnected(NState_IceExp,'s_surf',rc=rc)) then
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3008, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3013, file="module_MEDIATOR.F90")) return  ! bail out
           call State_SetFldPtr(NState_IceExp, 's_surf', 34.0_ESMF_KIND_R8, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3011, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3016, file="module_MEDIATOR.F90")) return  ! bail out
         endif
 
       endif
@@ -3016,7 +3019,7 @@ module module_MEDIATOR
     call NUOPC_MediatorGet(gcomp, mediatorClock=mediatorClock, &
       driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3046, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3051, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
        call ClockTimePrint(driverClock  ,trim(subname)//'driver clock1',rc)
@@ -3026,10 +3029,10 @@ module module_MEDIATOR
     ! set the mediatorClock to have the current start time as the driverClock
     call ESMF_ClockGet(driverClock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3056, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3061, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_ClockSet(mediatorClock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3059, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3064, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
        call ClockTimePrint(driverClock  ,trim(subname)//'driver clock2',rc)
@@ -3039,7 +3042,7 @@ module module_MEDIATOR
     ! check and set the component clock against the driver clock
     call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3069, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3074, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -3075,16 +3078,16 @@ module module_MEDIATOR
 
     call MedPhase_prep_atm(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3105, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3110, file="module_MEDIATOR.F90")) return  ! bail out
     call MedPhase_prep_ice(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3108, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3113, file="module_MEDIATOR.F90")) return  ! bail out
     call MedPhase_prep_lnd(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3111, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3116, file="module_MEDIATOR.F90")) return  ! bail out
     call MedPhase_prep_hyd(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3114, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3119, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -3136,13 +3139,13 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3166, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3171, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3172, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3177, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     call ESMF_TimeGet(time,timestring=timestr)
@@ -3155,10 +3158,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3185, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3190, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3188, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3193, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -3219,7 +3222,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_o2a_patch, &
          string='o2a', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3249, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3254, file="module_MEDIATOR.F90")) return  ! bail out
 
 !BL2017b 
 ! use the nearest neighbor method
@@ -3227,24 +3230,24 @@ module module_MEDIATOR
          nearestmap=is_local%wrap%RH_o2a_nearest, &
          string='o2a_nearest', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3257, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3262, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldBundleGet(is_local%wrap%FBOcn_a, fieldCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3261, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3266, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(fieldNameList(fieldCount))
       call ESMF_FieldBundleGet(is_local%wrap%FBOcn_a, fieldNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3265, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3270, file="module_MEDIATOR.F90")) return  ! bail out
 
       do n = 1, fieldCount
       call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_a, fieldNameList(n),dataPtr1,rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3270, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3275, file="module_MEDIATOR.F90")) return  ! bail out
 
       call FieldBundle_GetFldPtr(is_local%wrap%FBOcn2_a, fieldNameList(n), dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3274, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3279, file="module_MEDIATOR.F90")) return  ! bail out
 
       do j=lbound(dataPtr1,2),ubound(dataPtr1,2)
       do i=lbound(dataPtr1,1),ubound(dataPtr1,1)
@@ -3264,7 +3267,7 @@ module module_MEDIATOR
 !         patchmap=is_local%wrap%RH_o2a_patch, &
 !         string='o2aatmocn', rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3294, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3299, file="module_MEDIATOR.F90")) return  ! bail out
 !
 !!BL2017b
 !! use the nearest neighbor method
@@ -3272,24 +3275,24 @@ module module_MEDIATOR
 !         nearestmap=is_local%wrap%RH_o2a_nearest, &
 !         string='atmocn_o2a_nearest', rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3302, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3307, file="module_MEDIATOR.F90")) return  ! bail out
 !
 !      call ESMF_FieldBundleGet(is_local%wrap%FBAtmOcn_a, fieldCount=fieldCount, rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3306, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3311, file="module_MEDIATOR.F90")) return  ! bail out
 !      allocate(fieldNameList(fieldCount))
 !      call ESMF_FieldBundleGet(is_local%wrap%FBAtmOcn_a, fieldNameList=fieldNameList, rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3310, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3315, file="module_MEDIATOR.F90")) return  ! bail out
 !
 !      do n = 1, fieldCount
 !      call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_a, fieldNameList(n),dataPtr1,rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3315, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3320, file="module_MEDIATOR.F90")) return  ! bail out
 !
 !      call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn2_a, fieldNameList(n), dataPtr2, rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3319, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3324, file="module_MEDIATOR.F90")) return  ! bail out
 !
 !      do j=lbound(dataPtr1,2),ubound(dataPtr1,2)
 !      do i=lbound(dataPtr1,1),ubound(dataPtr1,1)
@@ -3314,7 +3317,7 @@ module module_MEDIATOR
 
         call FieldBundle_GetFldPtr(is_local%wrap%FBIce_i, 'ice_fraction', dataPtr1, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3344, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3349, file="module_MEDIATOR.F90")) return  ! bail out
         allocate(ifrac_i (lbound(dataPtr1,1):ubound(dataPtr1,1),lbound(dataPtr1,2):ubound(dataPtr1,2)))
           do j=lbound(dataptr1,2),ubound(dataptr1,2)
           do i=lbound(dataptr1,1),ubound(dataptr1,1)
@@ -3327,11 +3330,11 @@ module module_MEDIATOR
                                        is_local%wrap%FBIce2_a,'ice_fraction', &
                                        is_local%wrap%RH_i2a_nearest, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3357, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3362, file="module_MEDIATOR.F90")) return  ! bail out
 
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce2_a,'ice_fraction', dataPtr5, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3361, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3366, file="module_MEDIATOR.F90")) return  ! bail out
 !BL2017b
 
         !--- conservative frac
@@ -3340,12 +3343,12 @@ module module_MEDIATOR
                                        is_local%wrap%FBIce_a,'ice_fraction', &
                                        is_local%wrap%RH_i2a_consf, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3370, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3375, file="module_MEDIATOR.F90")) return  ! bail out
 
           !--- copy out the ifrac on atm grid
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, 'ice_fraction', dataPtr2, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3375, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3380, file="module_MEDIATOR.F90")) return  ! bail out
 
           do j=lbound(dataPtr2,2),ubound(dataPtr2,2)
           do i=lbound(dataPtr2,1),ubound(dataPtr2,1)
@@ -3378,12 +3381,12 @@ module module_MEDIATOR
                                        is_local%wrap%FBIce_a,'ice_fraction', &
                                        is_local%wrap%RH_i2a_consd, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3408, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3413, file="module_MEDIATOR.F90")) return  ! bail out
 !BL2017b
           !--- copy out the ifrac on atm grid
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, 'ice_fraction', dataPtr2, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3413, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3418, file="module_MEDIATOR.F90")) return  ! bail out
 
           allocate(ifrac_adr(lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
           allocate(ifrac_ad (lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
@@ -3420,12 +3423,12 @@ module module_MEDIATOR
                                        is_local%wrap%FBIce_a,'ice_fraction', &
                                        is_local%wrap%RH_i2a_bilnr, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3450, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3455, file="module_MEDIATOR.F90")) return  ! bail out
 
           !--- copy out the ifrac on ice grid and ifrac on atm grid
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, 'ice_fraction', dataPtr2, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3455, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3460, file="module_MEDIATOR.F90")) return  ! bail out
 
           allocate(ifrac_abr(lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
           allocate(ifrac_ab (lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
@@ -3455,12 +3458,12 @@ module module_MEDIATOR
                                        is_local%wrap%FBIce_a,'ice_fraction', &
                                        is_local%wrap%RH_i2a_patch, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3485, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3490, file="module_MEDIATOR.F90")) return  ! bail out
 
           !--- copy out the ifrac on ice grid and ifrac on atm grid
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, 'ice_fraction', dataPtr2, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3490, file="module_MEDIATOR.F90")) return  ! bail out
+            line=3495, file="module_MEDIATOR.F90")) return  ! bail out
 
           allocate(ifrac_apr(lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
           allocate(ifrac_ap (lbound(dataptr2,1):ubound(dataptr2,1),lbound(dataptr2,2):ubound(dataptr2,2)))
@@ -3508,13 +3511,13 @@ module module_MEDIATOR
            patchmap=is_local%wrap%RH_i2a_patch, &
            string='i2a', rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3538, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3543, file="module_MEDIATOR.F90")) return  ! bail out
 !BL2017b
         call Fieldbundle_Regrid2(fldsFrIce, is_local%wrap%FBIce_if, is_local%wrap%FBIce2_a, &
          nearestmap=is_local%wrap%RH_i2a_nearest, &
          string='i2a_nearest', rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3544, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3549, file="module_MEDIATOR.F90")) return  ! bail out
 !BL2017b
 
         !--- divide FBIce_a by ifrac_a, interpolated ice fraction
@@ -3590,13 +3593,13 @@ module module_MEDIATOR
            patchmap=is_local%wrap%RH_i2a_patch, &
            string='i2a', rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3620, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3625, file="module_MEDIATOR.F90")) return  ! bail out
 
         call Fieldbundle_Regrid2(fldsFrIce, is_local%wrap%FBIce_i, is_local%wrap%FBIce2_a, &
          nearestmap=is_local%wrap%RH_i2a_nearest, &
          string='i2a_nearest', rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3626, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3631, file="module_MEDIATOR.F90")) return  ! bail out
 
         do n = 1,fldsFrIce%num
           call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, fldsFrIce%shortname(n), dataPtr3, rc=rc)
@@ -3625,7 +3628,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_l2a_patch, &
          string='l2a', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3655, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3660, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%h2a_active) then
@@ -3636,7 +3639,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_h2a_patch, &
          string='h2a', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3666, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3671, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -3663,20 +3666,20 @@ module module_MEDIATOR
         singleFile=.true., overwrite=.true., timeslice=is_local%wrap%fastcntr, &
         iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3694, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3699, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldBundleWrite(is_local%wrap%FBIce_a, 'fields_med_ice_a.nc', &
         singleFile=.true., overwrite=.true., timeslice=is_local%wrap%fastcntr, &
         iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3700, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3705, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !--- check for ice fraction out of range
 
     call FieldBundle_GetFldPtr(is_local%wrap%FBIce_a, 'ice_fraction', icewgt, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3708, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3713, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! FLAG icewgt > 1.0
     write(msgString,'(A,3g17.10)')trim(subname)//trim(' FLAG icewgt>1.0'), &
@@ -3688,7 +3691,7 @@ module module_MEDIATOR
     if (generate_landmask) then
       call FieldBundle_GetFldPtr(is_local%wrap%FBforAtm, 'land_mask', dataPtr3, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3720, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3725, file="module_MEDIATOR.F90")) return  ! bail out
       do j=lbound(dataPtr3,2),ubound(dataPtr3,2)
       do i=lbound(dataPtr3,1),ubound(dataPtr3,1)
 !        dataPtr3(i,j) = land_mask(i,j)
@@ -3697,7 +3700,7 @@ module module_MEDIATOR
       enddo
 !BL2017b
     else
-      call ESMF_LogWrite(trim(subname)//": ERROR generate_landmask must be true ", ESMF_LOGMSG_ERROR, line=3729, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR generate_landmask must be true ", ESMF_LOGMSG_ERROR, line=3734, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
@@ -3708,7 +3711,7 @@ module module_MEDIATOR
 
     call state_reset(NState_AtmExp, value=spval, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3740, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3745, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_AtmExp, trim(subname)//' AtmExp_99 ', rc=rc)
@@ -3720,7 +3723,7 @@ module module_MEDIATOR
 
     call fieldBundle_copy(NState_AtmExp, is_local%wrap%FBforAtm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3752, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3757, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (statewrite_flag) then
     ! write the fields exported to atm to file
@@ -3732,11 +3735,11 @@ module module_MEDIATOR
         "field_med_to_atm_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=3770, file="module_MEDIATOR.F90")) return  ! bail out
+        line=3775, file="module_MEDIATOR.F90")) return  ! bail out
 !      write(fname,'(a,i6.6)') 'field_med_to_atm_',is_local%wrap%fastcntr
 !      call FieldBundle_RWFields('write',trim(fname),is_local%wrap%FBforAtm,rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=3774, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=3779, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -3775,13 +3778,13 @@ module module_MEDIATOR
            staggerLocList=(/ESMF_STAGGERLOC_CORNER, ESMF_STAGGERLOC_CENTER/), &
            rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3814, &
+            line=3819, &
             file="module_MEDIATOR.F90")) &
             return  ! bail out
           
           call ESMF_FieldBundleGet(fieldBundle, fieldCount=icount, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3820, &
+            line=3825, &
             file="module_MEDIATOR.F90")) &
             return  ! bail out
 
@@ -3789,7 +3792,7 @@ module module_MEDIATOR
 
           call ESMF_FieldBundleGet(fieldBundle, fieldNameList=itemNameList, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=3828, &
+            line=3833, &
             file="module_MEDIATOR.F90")) &
             return  ! bail out
 
@@ -3797,13 +3800,13 @@ module module_MEDIATOR
             call ESMF_LogWrite("RegridWrite Field Name Initiated: "//trim(itemNameList(i)), ESMF_LOGMSG_INFO)
             call ESMF_FieldBundleGet(fieldBundle, fieldName=itemNameList(i), field=field, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=3836, &
+              line=3841, &
               file="module_MEDIATOR.F90")) &
               return  ! bail out
             call ESMFPP_RegridWrite(field, outGrid, ESMF_REGRIDMETHOD_BILINEAR, &
               fileName//trim(itemNameList(i))//'.nc', timeslice, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=3842, &
+              line=3847, &
               file="module_MEDIATOR.F90")) &
               return  ! bail out
             call ESMF_LogWrite("RegridWrite Field Name done: "//trim(itemNameList(i)), ESMF_LOGMSG_INFO)
@@ -3830,7 +3833,7 @@ module module_MEDIATOR
 
         outField = ESMF_FieldCreate(outGrid, typekind=ESMF_TYPEKIND_R8, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-             line=3869, &
+             line=3874, &
              file="module_MEDIATOR.F90")) &
              return  ! bail out
 
@@ -3842,20 +3845,20 @@ module module_MEDIATOR
              Routehandle=rh, &
              rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-             line=3881, &
+             line=3886, &
              file="module_MEDIATOR.F90")) &
              return  ! bail out
 
         call ESMF_FieldRegrid(inField, outField, Routehandle=rh, &
           termorderflag=ESMF_TERMORDER_SRCSEQ, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-             line=3888, &
+             line=3893, &
              file="module_MEDIATOR.F90")) &
              return  ! bail out
 
         call ESMF_FieldWrite(outField, fileName, overwrite=.true., timeslice=timeslice, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-             line=3894, &
+             line=3899, &
              file="module_MEDIATOR.F90")) &
              return  ! bail out
 
@@ -3891,25 +3894,25 @@ module module_MEDIATOR
     ! query the Component for info
     call NUOPC_MediatorGet(gcomp, driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3930, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3935, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3934, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3939, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! set the Clock to have the current time as the driverClock
     call ESMF_ClockGet(driverClock, currTime=currTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3939, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3944, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_ClockSet(Clock, currTime=currTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3942, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3947, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3948, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3953, file="module_MEDIATOR.F90")) return  ! bail out
 
     !---------------------------
     ! validate all data by default
@@ -3917,7 +3920,7 @@ module module_MEDIATOR
 
     call NUOPC_SetTimestamp(NState_AtmExp, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=3960, file="module_MEDIATOR.F90")) return  ! bail out
+      line=3965, file="module_MEDIATOR.F90")) return  ! bail out
 
     !---------------------------
     ! COLDSTART:
@@ -3929,24 +3932,24 @@ module module_MEDIATOR
       if (is_local%wrap%fastcntr == 1) then
         call NUOPC_SetTimestamp(NState_AtmExp, clock_invalidTimeStamp, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3976, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3981, file="module_MEDIATOR.F90")) return  ! bail out
       else
         call ESMF_StateGet(NState_AtmExp, itemCount=fieldCount, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3980, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3985, file="module_MEDIATOR.F90")) return  ! bail out
         allocate(fieldNameList(fieldCount))
         call ESMF_StateGet(NState_AtmExp, itemNameList=fieldNameList, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3984, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3989, file="module_MEDIATOR.F90")) return  ! bail out
         nullify(fieldList)
         call NUOPC_GetStateMemberLists(NState_AtmExp, fieldList=fieldList, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=3988, file="module_MEDIATOR.F90")) return  ! bail out
+          line=3993, file="module_MEDIATOR.F90")) return  ! bail out
         do n = 1, fieldCount
           if (trim(fieldNameList(n))=="sea_surface_temperature") then
              call NUOPC_SetTimestamp(fieldList(n), time_invalidTimeStamp, rc=rc)
              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-               line=3997, file="module_MEDIATOR.F90")) return  ! bail out
+               line=4002, file="module_MEDIATOR.F90")) return  ! bail out
           endif
         enddo
         if (associated(fieldList)) deallocate(fieldList)
@@ -4001,20 +4004,20 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4052, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4057, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4058, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4063, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4062, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4067, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4065, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4070, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -4024,10 +4027,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4075, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4080, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4078, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4083, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -4111,31 +4114,31 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_a2i_patch, &
          string='a2i', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4162, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4167, file="module_MEDIATOR.F90")) return  ! bail out
 
 !BL2017  use nearest neighbor method
       call Fieldbundle_Regrid2(fldsFrAtm, is_local%wrap%FBAtm_a, is_local%wrap%FBAtm2_i, &
          nearestmap=is_local%wrap%RH_a2i_nearest, &
          string='a2i_nearest', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4169, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4174, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldBundleGet(is_local%wrap%FBAtm_i, fieldCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4173, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4178, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(fieldNameList(fieldCount))
       call ESMF_FieldBundleGet(is_local%wrap%FBAtm_i, fieldNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4177, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4182, file="module_MEDIATOR.F90")) return  ! bail out
 
       do n = 1, fieldCount
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_i, fieldNameList(n),dataPtr1,rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4182, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4187, file="module_MEDIATOR.F90")) return  ! bail out
 
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_i, fieldNameList(n), dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4186, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4191, file="module_MEDIATOR.F90")) return  ! bail out
 
       do j=lbound(dataPtr1,2),ubound(dataPtr1,2)
       do i=lbound(dataPtr1,1),ubound(dataPtr1,1)
@@ -4158,7 +4161,7 @@ module module_MEDIATOR
          fcopymap=is_local%wrap%RH_o2i_fcopy, &
          string='o2i', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4209, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4214, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -4181,17 +4184,17 @@ module module_MEDIATOR
 
     call FieldBundle_GetFldPtr(is_local%wrap%FBforIce, 'inst_temp_height_lowest', temperature, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4232, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4237, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBforIce, 'inst_pres_height_lowest', pressure, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4235, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4240, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBforIce, 'inst_spec_humid_height_lowest', humidity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4238, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4243, file="module_MEDIATOR.F90")) return  ! bail out
 
     call FieldBundle_GetFldPtr(is_local%wrap%FBforIce, 'air_density_height_lowest', air_density, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4242, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4247, file="module_MEDIATOR.F90")) return  ! bail out
 
     do j = lbound(temperature,2),ubound(temperature,2)
     do i = lbound(temperature,1),ubound(temperature,1)
@@ -4210,7 +4213,7 @@ module module_MEDIATOR
 
     call state_reset(NState_IceExp, value=spval, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4261, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4266, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_IceExp, trim(subname)//' IceExp_99 ', rc=rc)
@@ -4222,7 +4225,7 @@ module module_MEDIATOR
 
     call fieldBundle_copy(NState_IceExp, is_local%wrap%FBforIce, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4273, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4278, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call state_diagnose(NState_IceExp, trim(subname)//' IceExp_final ', rc=rc)
@@ -4238,7 +4241,7 @@ module module_MEDIATOR
         "field_med_to_ice_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4289, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4294, file="module_MEDIATOR.F90")) return  ! bail out
     endif
     
     !---------------------------------------
@@ -4279,20 +4282,20 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4330, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4335, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4336, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4341, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4340, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4345, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4343, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4348, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -4302,10 +4305,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4353, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4358, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4356, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4361, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -4357,7 +4360,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_a2l_patch, &
          string='a2l', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4408, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4413, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%h2l_active) then
@@ -4368,7 +4371,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_h2l_patch, &
          string='h2l', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4419, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4424, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -4395,7 +4398,7 @@ module module_MEDIATOR
 
     call state_reset(NState_LndExp, value=spval, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4446, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4451, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_LndExp, trim(subname)//' LndExp_99 ', rc=rc)
@@ -4407,7 +4410,7 @@ module module_MEDIATOR
 
     call fieldBundle_copy(NState_LndExp, is_local%wrap%FBforLnd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4458, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4463, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call state_diagnose(NState_LndExp, trim(subname)//' LndExp_final ', rc=rc)
@@ -4420,7 +4423,7 @@ module module_MEDIATOR
         fileNamePrefix="field_med_to_lnd_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4471, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4476, file="module_MEDIATOR.F90")) return  ! bail out
     endif
     
     !---------------------------------------
@@ -4461,20 +4464,20 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4512, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4517, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4518, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4523, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4522, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4527, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4525, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4530, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -4484,10 +4487,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4535, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4540, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4538, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4543, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -4539,7 +4542,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_a2h_patch, &
          string='a2h', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4590, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4595, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (is_local%wrap%l2h_active) then
@@ -4550,7 +4553,7 @@ module module_MEDIATOR
          patchmap=is_local%wrap%RH_l2h_patch, &
          string='l2h', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4601, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4606, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -4577,7 +4580,7 @@ module module_MEDIATOR
 
     call state_reset(NState_HydExp, value=spval, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4628, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4633, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_HydExp, trim(subname)//' HydExp_99 ', rc=rc)
@@ -4589,7 +4592,7 @@ module module_MEDIATOR
 
     call fieldBundle_copy(NState_HydExp, is_local%wrap%FBforHyd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4640, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4645, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call state_diagnose(NState_HydExp, trim(subname)//' HydExp_final ', rc=rc)
@@ -4602,7 +4605,7 @@ module module_MEDIATOR
         fileNamePrefix="field_med_to_hyd_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4653, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4658, file="module_MEDIATOR.F90")) return  ! bail out
     endif
     
     !---------------------------------------
@@ -4650,10 +4653,10 @@ module module_MEDIATOR
     
     call MedPhase_atm_ocn_flux(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4701, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4706, file="module_MEDIATOR.F90")) return  ! bail out
     call MedPhase_accum_fast(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4704, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4709, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -4687,20 +4690,20 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4738, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4743, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4744, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4749, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4748, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4753, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4751, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4756, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -4710,10 +4713,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4761, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4766, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4764, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4769, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (statewrite_flag) then
@@ -4726,11 +4729,11 @@ module module_MEDIATOR
         "field_med_from_atm_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4783, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4788, file="module_MEDIATOR.F90")) return  ! bail out
 !      write(fname,'(a,i6.6)') 'field_med_from_atm_',is_local%wrap%fastcntr
 !      call FieldBundle_RWFields('write',trim(fname),is_local%wrap%FBAtm_a,rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=4787, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=4792, file="module_MEDIATOR.F90")) return  ! bail out
       ! write the fields imported from ice to file
       write(msgString,'(A,i10)')trim(subname)//trim(': write field_med_from_ice '), is_local%wrap%fastcntr
       call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=rc)
@@ -4739,7 +4742,7 @@ module module_MEDIATOR
         "field_med_from_ice_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4797, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4802, file="module_MEDIATOR.F90")) return  ! bail out
 
       ! write the fields imported from lnd to file
       call NUOPC_Write(NState_LndImp, &
@@ -4747,7 +4750,7 @@ module module_MEDIATOR
         fileNamePrefix="field_med_from_lnd_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4805, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4810, file="module_MEDIATOR.F90")) return  ! bail out
 
       ! write the fields imported from hyd to file
       call NUOPC_Write(NState_HydImp, &
@@ -4755,7 +4758,7 @@ module module_MEDIATOR
         fileNamePrefix="field_med_from_hyd_", timeslice=is_local%wrap%fastcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4813, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4818, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -4776,27 +4779,27 @@ module module_MEDIATOR
 
     call fieldBundle_accum(is_local%wrap%FBaccumAtm, NState_AtmImp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4834, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4839, file="module_MEDIATOR.F90")) return  ! bail out
     is_local%wrap%accumcntAtm = is_local%wrap%accumcntAtm + 1
 
     call fieldBundle_accum(is_local%wrap%FBaccumIce, NState_IceImp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4839, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4844, file="module_MEDIATOR.F90")) return  ! bail out
     is_local%wrap%accumcntIce = is_local%wrap%accumcntIce + 1
 
     call fieldBundle_accum(is_local%wrap%FBaccumLnd, NState_LndImp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4844, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4849, file="module_MEDIATOR.F90")) return  ! bail out
     is_local%wrap%accumcntLnd = is_local%wrap%accumcntLnd + 1
 
     call fieldBundle_accum(is_local%wrap%FBaccumHyd, NState_HydImp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4849, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4854, file="module_MEDIATOR.F90")) return  ! bail out
     is_local%wrap%accumcntHyd = is_local%wrap%accumcntHyd + 1
 
     call fieldBundle_accum(is_local%wrap%FBaccumAtmOcn, is_local%wrap%FBAtmOcn_o, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4854, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4859, file="module_MEDIATOR.F90")) return  ! bail out
     is_local%wrap%accumcntAtmOcn = is_local%wrap%accumcntAtmOcn + 1
 
     if (dbug_flag > 1) then
@@ -4842,6 +4845,8 @@ module module_MEDIATOR
 ! LHC 2020
     real(ESMF_KIND_R8), pointer :: u10m(:,:),v10m(:,:),t2m(:,:),q2m(:,:), &
                                    mtaux(:,:),mtauy(:,:)
+    real(ESMF_KIND_R8), pointer :: u10m2(:,:),v10m2(:,:),t2m2(:,:),q2m2(:,:), &
+                                   mtaux2(:,:),mtauy2(:,:)
     real(ESMF_KIND_R8)          :: u10m1(1),v10m1(1),t2m1(1),q2m1(1), &
                                    mtaux1(1),mtauy1(1),th2m1(1)
 ! LHC 2020
@@ -4870,14 +4875,14 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4928, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4935, file="module_MEDIATOR.F90")) return  ! bail out
       
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4932, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4939, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4935, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4942, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -4887,17 +4892,17 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4945, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4952, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4948, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4955, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4955, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4962, file="module_MEDIATOR.F90")) return  ! bail out
 
     !---------------------------------------
     !--- compute atm/ocn fluxes
@@ -4909,7 +4914,7 @@ module module_MEDIATOR
     call fieldBundle_reset(is_local%wrap%FBAtm2_o, value=czero, rc=rc)
 !BL2017
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=4967, file="module_MEDIATOR.F90")) return  ! bail out
+      line=4974, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- atm fields on ocean grid input
     if (is_local%wrap%a2o_active) then
@@ -4925,28 +4930,28 @@ module module_MEDIATOR
 !        patchmap=is_local%wrap%RH_a2o_patch, &
         string='a2oflx', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4983, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4990, file="module_MEDIATOR.F90")) return  ! bail out
 
 !BL2017  use nearest neighbor method
       call FieldBundle_Regrid2(fldsFrAtm, is_local%wrap%FBAtm_a, is_local%wrap%FBAtm2_o, &
         nearestmap=is_local%wrap%RH_a2o_nearest, &
         string='a2oflx_nearest', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4990, file="module_MEDIATOR.F90")) return  ! bail out
+        line=4997, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldBundleGet(is_local%wrap%FBAtm_o, fieldCount=fieldCount, rc=rc)
 
       allocate(fieldNameList(fieldCount))
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=4996, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5003, file="module_MEDIATOR.F90")) return  ! bail out
 
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_height_lowest', zbot, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5000, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5007, file="module_MEDIATOR.F90")) return  ! bail out
 
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_height_lowest', zbot2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5004, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5011, file="module_MEDIATOR.F90")) return  ! bail out
 
 !      write(msgString,'(A,3g14.7)') trim(subname)//':'//trim(fieldNameList(1)), &
 !        minval(zbot2),maxval(zbot2),sum(zbot2)
@@ -4958,38 +4963,76 @@ module module_MEDIATOR
 
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height_lowest', tbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5016, file="module_MEDIATOR.F90")) return  ! bail out
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_temp_height_lowest', tbot2, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5019, file="module_MEDIATOR.F90")) return  ! bail out
-
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_zonal_wind_height_lowest', ubot, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5023, file="module_MEDIATOR.F90")) return  ! bail out
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_zonal_wind_height_lowest',ubot2, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_temp_height_lowest', tbot2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5026, file="module_MEDIATOR.F90")) return  ! bail out
 
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_merid_wind_height_lowest', vbot, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_zonal_wind_height_lowest', ubot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5030, file="module_MEDIATOR.F90")) return  ! bail out
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_merid_wind_height_lowest',vbot2, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_zonal_wind_height_lowest',ubot2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5033, file="module_MEDIATOR.F90")) return  ! bail out
 
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_pres_height_lowest', pbot, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_merid_wind_height_lowest', vbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5037, file="module_MEDIATOR.F90")) return  ! bail out
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_pres_height_lowest', pbot2, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_merid_wind_height_lowest',vbot2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5040, file="module_MEDIATOR.F90")) return  ! bail out
 
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height_lowest', qbot, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_pres_height_lowest', pbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5044, file="module_MEDIATOR.F90")) return  ! bail out
-    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_spec_humid_height_lowest',qbot2, rc=rc)
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_pres_height_lowest', pbot2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=5047, file="module_MEDIATOR.F90")) return  ! bail out
+
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height_lowest', qbot, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5051, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_spec_humid_height_lowest',qbot2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5054, file="module_MEDIATOR.F90")) return  ! bail out
+
+! LHC 2020
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5059, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_u_wind_height10m', u10m2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5062, file="module_MEDIATOR.F90")) return  ! bail out
+
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_v_wind_height10m', v10m, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5066, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_v_wind_height10m', v10m2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5069, file="module_MEDIATOR.F90")) return  ! bail out
+
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height2m', t2m, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5073, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_temp_height2m', t2m2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5076, file="module_MEDIATOR.F90")) return  ! bail out
+
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height2m', q2m, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5080, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_spec_humid_height2m', q2m2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5083, file="module_MEDIATOR.F90")) return  ! bail out
+
+  ! call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_zonal_moment_flx_atm', mtaux, rc=rc)
+  ! if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  !   line=5087, file="module_MEDIATOR.F90")) return  ! bail out
+  ! call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_merid_moment_flx_atm', mtauy, rc=rc)
+  ! if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  !   line=5090, file="module_MEDIATOR.F90")) return  ! bail out
+
+! LHC 2020
 
     do j=lbound(zbot,2),ubound(zbot,2)
     do i=lbound(zbot,1),ubound(zbot,1)
@@ -5000,6 +5043,10 @@ module module_MEDIATOR
     vbot(i,j)=vbot2(i,j)
     qbot(i,j)=qbot2(i,j)
     pbot(i,j)=pbot2(i,j)
+    u10m(i,j)=u10m2(i,j) 
+    v10m(i,j)=v10m2(i,j) 
+    t2m(i,j)=t2m2(i,j) 
+    q2m(i,j)=q2m2(i,j) 
     endif
     enddo
     enddo
@@ -5010,93 +5057,92 @@ module module_MEDIATOR
     !--- ocean fields input
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_height_lowest', zbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5068, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5117, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_zonal_wind_height_lowest', ubot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5071, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5120, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_merid_wind_height_lowest', vbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5074, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5123, file="module_MEDIATOR.F90")) return  ! bail out
 !    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_pot_temp_height_lowest', thbot, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=5077, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=5126, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height_lowest', qbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5080, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5129, file="module_MEDIATOR.F90")) return  ! bail out
 !    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_density_height_lowest', rbot, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=5083, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=5132, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height_lowest', tbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5086, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5135, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_pres_height_lowest', pbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5089, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5138, file="module_MEDIATOR.F90")) return  ! bail out
 ! LHC 2020
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5093, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5142, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_v_wind_height10m', v10m, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5096, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5145, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height2m', t2m, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5099, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5148, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height2m', q2m, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5102, file="module_MEDIATOR.F90")) return  ! bail out
-!   call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_zonal_moment_flx_atm', mtaux, rc=rc)
-!   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!     line=5105, file="module_MEDIATOR.F90")) return  ! bail out
-!   call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_merid_moment_flx_atm', mtauy, rc=rc)
-!   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!     line=5108, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5151, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_zonal_moment_flx_atm', mtaux, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5154, file="module_MEDIATOR.F90")) return  ! bail out
+    call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_merid_moment_flx_atm', mtauy, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=5157, file="module_MEDIATOR.F90")) return  ! bail out
 
-      write(msgString,'(A,i10)')trim(subname)//trim(': write in  MedPhase_prep_ocn '), "PT1"
 ! LHC 2020
 
     !--- ocean fields input
     call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_o, 'ocean_mask', mask, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5116, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5164, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_o, 'ocn_current_zonal', us, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5119, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5167, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_o, 'ocn_current_merid', vs, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5122, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5170, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_o, 'sea_surface_temperature', ts, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5125, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5173, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- atm/ocn fluxes output
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'mean_up_lw_flx_ocn', lwup, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5130, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5178, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'mean_sensi_heat_flx_atm_into_ocn', sen, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5133, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5181, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'mean_laten_heat_flx_atm_into_ocn', lat, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5136, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5184, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'mean_evap_rate_atm_into_ocn', evap, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5139, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5187, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'stress_on_air_ocn_zonal', taux, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5142, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5190, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'stress_on_air_ocn_merid', tauy, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5145, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5193, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'temperature_2m', tref, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5148, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5196, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'humidity_2m', qref, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5151, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5199, file="module_MEDIATOR.F90")) return  ! bail out
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtmOcn_o, 'wind_speed_squared_10m', duu10n, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5154, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5202, file="module_MEDIATOR.F90")) return  ! bail out
 
     !--- flux calculation
     do j=lbound(zbot,2),ubound(zbot,2)
@@ -5118,13 +5164,13 @@ module module_MEDIATOR
 
       mask1(1)  = nint(mask(i,j))
 ! LHC 2020
-      call shr_flux_atmOcn(1         ,zbot1(1)  ,ubot1(1)  ,vbot1(1)  ,thbot1(1) ,   &
-                           qbot1(1)  ,rbot1(1)  ,tbot1(1)  ,us1(1)    ,vs1(1)    ,   &
-                           ts1(1)    ,mask1(1)  ,sen1(1)   ,lat1(1)   ,lwup1(1)  ,   &
-!                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1))
-!tcx include this for the time being to get over the initialization hump
-                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
-                           missval = 0.0_ESMF_KIND_R8  )
+!      call shr_flux_atmOcn(1         ,zbot1(1)  ,ubot1(1)  ,vbot1(1)  ,thbot1(1) ,   &
+!                           qbot1(1)  ,rbot1(1)  ,tbot1(1)  ,us1(1)    ,vs1(1)    ,   &
+!                           ts1(1)    ,mask1(1)  ,sen1(1)   ,lat1(1)   ,lwup1(1)  ,   &
+!!                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1))
+!!tcx include this for the time being to get over the initialization hump
+!                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
+!                           missval = 0.0_ESMF_KIND_R8  )
       if(pbot(i,j) .gt. 0.0) &
      th2m1(1) = t2m(i,j)*((100000._ESMF_KIND_R8/pbot(i,j))**0.286_ESMF_KIND_R8)  ! tcx temporary, assume p2m and pbot
 
@@ -5136,12 +5182,12 @@ module module_MEDIATOR
       mtauy1(1) = mtauy(i,j)
       
 
-!     call shr_flux_atmOcn_bf(1   ,u10m1(1)  ,v10m1(1)  ,t2m1(1) ,th2m1(1)  ,q2m1(1)  ,  &
-!                          zbot1(1),  rbot1(1)  ,thbot1(1)  ,tbot1(1)  ,qbot1(1) ,  &
-!                          us1(1)    ,vs1(1)    ,ts1(1)    ,mask1(1)  ,  &
-!                          sen1(1)   ,lat1(1)   ,lwup1(1)  ,  &
-!                          evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
-!                          missval = 0.0_ESMF_KIND_R8  )
+     call shr_flux_atmOcn_bf(1   ,u10m1(1)  ,v10m1(1)  ,t2m1(1) ,th2m1(1)  ,q2m1(1)  ,  &
+                          zbot1(1),  rbot1(1)  ,thbot1(1)  ,tbot1(1)  ,qbot1(1) ,  &
+                          us1(1)    ,vs1(1)    ,ts1(1)    ,mask1(1)  ,  &
+                          sen1(1)   ,lat1(1)   ,lwup1(1)  ,  &
+                          evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
+                          missval = 0.0_ESMF_KIND_R8  )
 ! LHC 2020
 
       sen(i,j)    = sen1(1)
@@ -5170,7 +5216,7 @@ module module_MEDIATOR
         singleFile=.true., overwrite=.true., timeslice=is_local%wrap%fastcntr, &
         iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5228, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5276, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 5) then
@@ -5207,7 +5253,7 @@ module module_MEDIATOR
     
     call MedPhase_prep_ocn(gcomp,rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5265, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5313, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 5) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -5253,20 +5299,20 @@ module module_MEDIATOR
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5311, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5359, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5317, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5365, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5321, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5369, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5324, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5372, file="module_MEDIATOR.F90")) return  ! bail out
     if (dbug_flag > 1) then
       call ESMF_LogWrite(trim(subname)//": time = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
     endif
@@ -5276,10 +5322,10 @@ module module_MEDIATOR
         preString="-------->"//trim(subname)//" mediating for: ", &
         unit=msgString, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5334, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5382, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5337, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5385, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (statewrite_flag) then
@@ -5291,7 +5337,7 @@ module module_MEDIATOR
         "field_med_from_ocn_", timeslice=is_local%wrap%slowcntr, &
         overwrite=.true., relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5349, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5397, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -5308,23 +5354,23 @@ module module_MEDIATOR
 
     call FieldBundle_average(is_local%wrap%FBaccumAtm, is_local%wrap%accumcntAtm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5366, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5414, file="module_MEDIATOR.F90")) return  ! bail out
 
     call FieldBundle_average(is_local%wrap%FBaccumIce, is_local%wrap%accumcntIce, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5370, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5418, file="module_MEDIATOR.F90")) return  ! bail out
 
     call FieldBundle_average(is_local%wrap%FBaccumLnd, is_local%wrap%accumcntLnd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5374, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5422, file="module_MEDIATOR.F90")) return  ! bail out
 
     call FieldBundle_average(is_local%wrap%FBaccumHyd, is_local%wrap%accumcntHyd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5378, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5426, file="module_MEDIATOR.F90")) return  ! bail out
     
     call FieldBundle_average(is_local%wrap%FBaccumAtmOcn, is_local%wrap%accumcntAtmOcn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5382, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5430, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call FieldBundle_diagnose(is_local%wrap%FBaccumAtm, trim(subname)//' FBaccA_avg ', rc=rc)
@@ -5347,28 +5393,28 @@ module module_MEDIATOR
         patchmap=is_local%wrap%RH_a2o_patch, &
         string='a2o', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5405, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5453, file="module_MEDIATOR.F90")) return  ! bail out
 
 !BL2017  use nearest neighbor method
     call FieldBundle_Regrid2(fldsFrAtm, is_local%wrap%FBaccumAtm, is_local%wrap%FBAtm2_o, &
       nearestmap=is_local%wrap%RH_a2o_nearest, &
       string='a2o_nearest', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5412, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5460, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldBundleGet(is_local%wrap%FBAtm_o, fieldCount=fieldCount, rc=rc)
       allocate(fieldNameList(fieldCount))
       call ESMF_FieldBundleGet(is_local%wrap%FBAtm_o, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5418, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5466, file="module_MEDIATOR.F90")) return  ! bail out
 
       do n = 1, fieldCount
         call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, fieldNameList(n), tmp_n1,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5423, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5471, file="module_MEDIATOR.F90")) return  ! bail out
         call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, fieldNameList(n), tmp_n2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5426, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5474, file="module_MEDIATOR.F90")) return  ! bail out
       do j=lbound(tmp_n1,2),ubound(tmp_n1,2)
       do i=lbound(tmp_n1,1),ubound(tmp_n1,1)
         if(tmp_n1(i,j).eq.0._ESMF_KIND_R8.and.abs(tmp_n2(i,j)).gt.0._ESMF_KIND_R8) then
@@ -5391,7 +5437,7 @@ module module_MEDIATOR
         fcopymap=is_local%wrap%RH_i2o_fcopy, &
         string='i2o', rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5449, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5497, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     if (dbug_flag > 1) then
@@ -5435,14 +5481,14 @@ module module_MEDIATOR
       call ESMF_FieldBundleGet(is_local%wrap%FBAccumAtmOcn, fieldCount=fieldCount, rc=rc)
       allocate(fieldNameList(fieldCount))
       call ESMF_FieldBundleGet(is_local%wrap%FBAccumAtmOcn, fieldNameList=fieldNameList, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5493, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5541, file="module_MEDIATOR.F90")) return
 
       do n = 1, fieldCount
        call ESMF_FieldBundleGet(is_local%wrap%FBAccumAtmOcn, fieldname=fieldNameList(n), field=aofield, rc=rc)
-       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5497, file="module_MEDIATOR.F90")) return
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5545, file="module_MEDIATOR.F90")) return
        call ESMF_FieldWrite(aofield,'field_aofield_to_ocn_'//trim(fieldnameList(n))//'.nc', &
                             timeslice=is_local%wrap%slowcntr, overwrite=.true.,rc=rc)
-       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5500, file="module_MEDIATOR.F90")) return
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,line=5548, file="module_MEDIATOR.F90")) return
       end do
       deallocate(fieldNameList)
     endif
@@ -5461,7 +5507,7 @@ module module_MEDIATOR
     !   wgtp01 is 1 (when ice fraction is 0) or wgtp01 is zero (when ice fraction is > 0)
     call FieldBundle_GetFldPtr(is_local%wrap%FBIce_o, 'ice_fraction', icewgt, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5519, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5567, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(atmwgt(lbound(icewgt,1):ubound(icewgt,1),lbound(icewgt,2):ubound(icewgt,2)))
     allocate(customwgt(lbound(icewgt,1):ubound(icewgt,1),lbound(icewgt,2):ubound(icewgt,2)))
     allocate(atmwgt1(lbound(icewgt,1):ubound(icewgt,1),lbound(icewgt,2):ubound(icewgt,2)))
@@ -5488,7 +5534,7 @@ module module_MEDIATOR
       if (abs(atmwgt(i,j) + icewgt(i,j) - 1.0_ESMF_KIND_R8) > 1.0e-12 .or. &
           abs(atmwgt1(i,j) + icewgt1(i,j) + wgtp01(i,j) - 1.0_ESMF_KIND_R8) > 1.0e-12 .or. &
           abs(atmwgt1(i,j) + icewgt1(i,j) - wgtm01(i,j) - 1.0_ESMF_KIND_R8) > 1.0e-12) then
-        call ESMF_LogWrite(trim(subname)//": ERROR atm + ice fracs inconsistent", ESMF_LOGMSG_ERROR, line=5547, file="module_MEDIATOR.F90", rc=dbrc)
+        call ESMF_LogWrite(trim(subname)//": ERROR atm + ice fracs inconsistent", ESMF_LOGMSG_ERROR, line=5595, file="module_MEDIATOR.F90", rc=dbrc)
         rc = ESMF_FAILURE
         return
       endif
@@ -5513,7 +5559,7 @@ module module_MEDIATOR
                                 is_local%wrap%FBAtm_o      , 'mean_laten_heat_flx'      , customwgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5579, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5627, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! field_for_ocn = field_from_atm * (1-ice_fraction)
@@ -5523,13 +5569,13 @@ module module_MEDIATOR
                                 is_local%wrap%FBAtm_o , 'mean_fprec_rate', atmwgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5589, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5637, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn, 'mean_prec_rate', &
                                 is_local%wrap%FBAtm_o , 'mean_prec_rate', atmwgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5595, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5643, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! field_for_ocn = field_from_ice * ice_fraction
@@ -5539,21 +5585,21 @@ module module_MEDIATOR
                                 is_local%wrap%FBIce_o , 'net_heat_flx_to_ocn', icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5605, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5653, file="module_MEDIATOR.F90")) return  ! bail out
 
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn, 'mean_fresh_water_to_ocean_rate', &
                                 is_local%wrap%FBIce_o , 'mean_fresh_water_to_ocean_rate', icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5612, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5660, file="module_MEDIATOR.F90")) return  ! bail out
 
 ! not used by mom, mom uses net, also mean_down_lw_flx not connected to ocn
 !    call fieldBundle_FieldMerge(is_local%wrap%FBforOcn, 'mean_down_lw_flx', & 
 !                                is_local%wrap%FBAtm_o , 'mean_down_lw_flx', atmwgt, &
 !                                rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=5619, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=5667, file="module_MEDIATOR.F90")) return  ! bail out
 
 ! not used by mom, mom uses evap
 ! hycom uses latent heat flux
@@ -5562,14 +5608,14 @@ module module_MEDIATOR
     !                            is_local%wrap%FBAtm_o      , 'mean_laten_heat_flx'             , wgtm01, &
     !                            rc=rc)
     !if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    !  line=5628, file="module_MEDIATOR.F90")) return  ! bail out
+    !  line=5676, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn     , 'mean_sensi_heat_flx'             , & 
                                 is_local%wrap%FBAccumAtmOcn, 'mean_sensi_heat_flx_atm_into_ocn', atmwgt1, &
                                 is_local%wrap%FBAtm_o      , 'mean_sensi_heat_flx'             , wgtm01, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5635, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5683, file="module_MEDIATOR.F90")) return  ! bail out
       
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn     , 'mean_net_lw_flx'   , & 
                                 is_local%wrap%FBAtm_o      , 'mean_down_lw_flx'  , atmwgt1, &
@@ -5577,7 +5623,7 @@ module module_MEDIATOR
                                 is_local%wrap%FBAtm_o      , 'mean_net_lw_flx'   , wgtp01, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5643, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5691, file="module_MEDIATOR.F90")) return  ! bail out
 
 ! not used by mom, mom uses net, also mean_up_lw_flx not recvd from atm
 !    call fieldBundle_FieldMerge(is_local%wrap%FBforOcn     , 'mean_up_lw_flx'    , & 
@@ -5585,7 +5631,7 @@ module module_MEDIATOR
 !                                is_local%wrap%FBAtm_o      , 'mean_up_lw_flx'    , wgtp01, &
 !                                rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=5651, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=5699, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! field_for_ocn = field_from_ice * ice_fraction
@@ -5595,7 +5641,7 @@ module module_MEDIATOR
                                 is_local%wrap%FBIce_o , 'mean_salt_rate', icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5661, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5709, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! field_for_ocn = field_from_atm * (1-ice_fraction) + field_from_ice * (ice_fraction)
@@ -5607,7 +5653,7 @@ module module_MEDIATOR
                                 is_local%wrap%FBAtm_o      , 'mean_zonal_moment_flx_atm'  , wgtm01, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5673, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5721, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn     , 'mean_merid_moment_flx'  , & 
                                 is_local%wrap%FBAccumAtmOcn, 'stress_on_air_ocn_merid', atmwgt1, &
@@ -5615,7 +5661,7 @@ module module_MEDIATOR
                                 is_local%wrap%FBAtm_o      , 'mean_merid_moment_flx_atm'  , wgtm01, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5681, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5729, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! netsw_for_ocn = downsw_from_atm * (1-ocn_albedo) * (1-ice_fraction) + pensw_from_ice * (ice_fraction)
@@ -5628,35 +5674,35 @@ module module_MEDIATOR
                                 is_local%wrap%FBIce_o ,'mean_sw_pen_to_ocn' ,icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5694, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5742, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn,'mean_net_sw_vis_dir_flx' , & 
                                 is_local%wrap%FBAtm_o ,'mean_down_sw_vis_dir_flx',customwgt, &
                                 is_local%wrap%FBIce_o ,'mean_sw_pen_to_ocn_vis_dir_flx' ,icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5701, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5749, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn,'mean_net_sw_vis_dif_flx' , & 
                                 is_local%wrap%FBAtm_o ,'mean_down_sw_vis_dif_flx',customwgt, &
                                 is_local%wrap%FBIce_o ,'mean_sw_pen_to_ocn_vis_dif_flx',icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5708, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5756, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn,'mean_net_sw_ir_dir_flx' , & 
                                 is_local%wrap%FBAtm_o ,'mean_down_sw_ir_dir_flx',customwgt, &
                                 is_local%wrap%FBIce_o ,'mean_sw_pen_to_ocn_ir_dir_flx',icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5715, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5763, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_FieldMerge(is_local%wrap%FBforOcn,'mean_net_sw_ir_dif_flx' , & 
                                 is_local%wrap%FBAtm_o ,'mean_down_sw_ir_dif_flx',customwgt, &
                                 is_local%wrap%FBIce_o ,'mean_sw_pen_to_ocn_ir_dif_flx',icewgt, &
                                 rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5722, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5770, file="module_MEDIATOR.F90")) return  ! bail out
 
     !-------------
     ! End merges
@@ -5677,27 +5723,27 @@ module module_MEDIATOR
     is_local%wrap%accumcntAtm = 0
     call fieldBundle_reset(is_local%wrap%FBaccumAtm, value=czero, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5743, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5791, file="module_MEDIATOR.F90")) return  ! bail out
 
     is_local%wrap%accumcntIce = 0
     call fieldBundle_reset(is_local%wrap%FBaccumIce, value=czero, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5748, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5796, file="module_MEDIATOR.F90")) return  ! bail out
 
     is_local%wrap%accumcntLnd = 0
     call fieldBundle_reset(is_local%wrap%FBaccumLnd, value=czero, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5753, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5801, file="module_MEDIATOR.F90")) return  ! bail out
 
     is_local%wrap%accumcntHyd = 0
     call fieldBundle_reset(is_local%wrap%FBaccumHyd, value=czero, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5758, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5806, file="module_MEDIATOR.F90")) return  ! bail out
 
     is_local%wrap%accumcntAtmOcn = 0
     call fieldBundle_reset(is_local%wrap%FBaccumAtmOcn, value=czero, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5763, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5811, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
 !tcx      call FieldBundle_diagnose(is_local%wrap%FBaccumAtm, trim(subname)//' FBacc_AFzero ', rc=rc)
@@ -5711,7 +5757,7 @@ module module_MEDIATOR
 
     call state_reset(NState_OcnExp, value=spval, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5777, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5825, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_OcnExp, trim(subname)//' es_AF99 ', rc=rc)
@@ -5723,7 +5769,7 @@ module module_MEDIATOR
 
     call fieldBundle_copy(NState_OcnExp, is_local%wrap%FBforOcn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5789, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5837, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 1) then
       call State_diagnose(NState_OcnExp, trim(subname)//' es_AFcp ', rc=rc)
@@ -5739,7 +5785,7 @@ module module_MEDIATOR
         "field_med_to_ocn_", timeslice=is_local%wrap%slowcntr, &
         relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5805, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5853, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     !---------------------------------------
@@ -5786,17 +5832,17 @@ module module_MEDIATOR
     if (restart_interval > 0) then
       call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5852, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5900, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_ClockGet(clock,currTime=currTime,startTime=startTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5856, file="module_MEDIATOR.F90")) return  ! bail out
+        line=5904, file="module_MEDIATOR.F90")) return  ! bail out
 
       elapsedTime = currTime - startTime
 
       call ESMF_TimeIntervalGet(elapsedTime,s_i8=sec8,rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=5862, file="module_MEDIATOR.F90")) return  ! bail out 
+        line=5910, file="module_MEDIATOR.F90")) return  ! bail out 
 
       if (mod(sec8,restart_interval) == 0) then
         write(msgString,*) trim(subname)//' restart at sec8= ',sec8,restart_interval
@@ -5804,7 +5850,7 @@ module module_MEDIATOR
 
         call ESMF_TimeGet(currTime,yy=yr,mm=mon,dd=day,h=hr,m=min,s=sec,rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=5870, file="module_MEDIATOR.F90")) return  ! bail out
+          line=5918, file="module_MEDIATOR.F90")) return  ! bail out
 
         write(fname,'(i4.4,2i2.2,a,3i2.2,a)') yr,mon,day,'-',hr,min,sec,'_mediator'
         write(msgString,*) trim(subname)//' restart to '//trim(fname)
@@ -5812,7 +5858,7 @@ module module_MEDIATOR
 
         call Mediator_restart(gcomp,'write',trim(fname),rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=5878, file="module_MEDIATOR.F90")) return  ! bail out
+          line=5926, file="module_MEDIATOR.F90")) return  ! bail out
       endif
     endif
 
@@ -5842,67 +5888,67 @@ module module_MEDIATOR
 
     call Mediator_restart(gcomp,'write','mediator',rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5908, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5956, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! Get the internal state from Component.
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5914, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5962, file="module_MEDIATOR.F90")) return  ! bail out
       
     ! Destroy objects inside of internal state.
     ! TODO: destroy objects inside objects
 
     call fieldBundle_clean(is_local%wrap%FBaccumAtm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5921, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5969, file="module_MEDIATOR.F90")) return  ! bail out
 
 ! tcraig - generates errors
 !    call fieldBundle_clean(is_local%wrap%FBaccumOcn, rc=rc)
 !    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=5926, file="module_MEDIATOR.F90")) return  ! bail out
+!      line=5974, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBaccumIce, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5930, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5978, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBaccumLnd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5934, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5982, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBaccumHyd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5938, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5986, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBaccumAtmOcn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5942, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5990, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBforAtm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5946, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5994, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBforOcn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5950, file="module_MEDIATOR.F90")) return  ! bail out
+      line=5998, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBforIce, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5954, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6002, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBforLnd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5958, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6006, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_clean(is_local%wrap%FBforHyd, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=5962, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6010, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! Deallocate the internal state memory.
     deallocate(is_local%wrap, stat=stat)
     if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
       msg="Deallocation of internal state memory failed.", &
-      line=5968, &
+      line=6016, &
       file="module_MEDIATOR.F90")) &
       return  ! bail out
       
@@ -5936,7 +5982,7 @@ module module_MEDIATOR
     rc = ESMF_SUCCESS
 
     if (mode /= 'write' .and. mode /= 'read') then
-      call ESMF_LogWrite(trim(subname)//": ERROR mode not allowed "//trim(mode), ESMF_LOGMSG_ERROR, line=6002, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR mode not allowed "//trim(mode), ESMF_LOGMSG_ERROR, line=6050, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
@@ -5945,91 +5991,91 @@ module module_MEDIATOR
     nullify(is_local%wrap)
     call ESMF_GridCompGetInternalState(gcomp, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6011, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6059, file="module_MEDIATOR.F90")) return  ! bail out
     fname = trim(bfname)//'_FBaccumAtm_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumAtm,read_rest_FBaccumAtm,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6021, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6069, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBaccumOcn_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumOcn,read_rest_FBaccumOcn,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6027, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6075, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBaccumIce_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumIce,read_rest_FBaccumIce,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6032, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6080, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBaccumLnd_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumLnd,read_rest_FBaccumLnd,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6037, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6085, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBaccumHyd_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumHyd,read_rest_FBaccumHyd,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6042, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6090, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBaccumAtmOcn_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBaccumAtmOcn,read_rest_FBaccumAtmOcn,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6047, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6095, file="module_MEDIATOR.F90")) return  ! bail out
 
     fname = trim(bfname)//'_FBAtm_a_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBAtm_a,read_rest_FBAtm_a,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6058, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6106, file="module_MEDIATOR.F90")) return  ! bail out
     if (mode == 'read') then
       call fieldBundle_copy(NState_AtmImp, is_local%wrap%FBAtm_a, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6063, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6111, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     fname = trim(bfname)//'_FBIce_i_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBIce_i,read_rest_FBIce_i,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6069, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6117, file="module_MEDIATOR.F90")) return  ! bail out
     if (mode == 'read') then
       call fieldBundle_copy(NState_IceImp, is_local%wrap%FBIce_i, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6073, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6121, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     fname = trim(bfname)//'_FBOcn_o_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBOcn_o,read_rest_FBOCN_o,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6079, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6127, file="module_MEDIATOR.F90")) return  ! bail out
     if (mode == 'read') then
       call fieldBundle_copy(NState_OcnImp, is_local%wrap%FBOcn_o, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6083, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6131, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     fname = trim(bfname)//'_FBLnd_l_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBLnd_l,read_rest_FBLnd_l,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6089, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6137, file="module_MEDIATOR.F90")) return  ! bail out
     if (mode == 'read') then
       call fieldBundle_copy(NState_LndImp, is_local%wrap%FBLnd_l, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6093, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6141, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     fname = trim(bfname)//'_FBHyd_h_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBHyd_h,read_rest_FBHyd_h,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6099, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6147, file="module_MEDIATOR.F90")) return  ! bail out
     if (mode == 'read') then
       call fieldBundle_copy(NState_HydImp, is_local%wrap%FBHyd_h, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6103, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6151, file="module_MEDIATOR.F90")) return  ! bail out
     endif
 
     fname = trim(bfname)//'_FBAtmOcn_o_restart.nc'
     call FieldBundle_RWFields(mode,fname,is_local%wrap%FBAtmOcn_o,read_rest_FBAtmOcn_o,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6109, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6157, file="module_MEDIATOR.F90")) return  ! bail out
 
     funit = 1101
     fname = trim(bfname)//'_scalars_restart.txt'
@@ -6105,7 +6151,7 @@ module module_MEDIATOR
       call ESMF_FieldBundleWrite(FB, fname, &
         singleFile=.true., status=ESMF_FILESTATUS_REPLACE, iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6185, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6233, file="module_MEDIATOR.F90")) return  ! bail out
       call fieldBundle_diagnose(FB, 'write '//trim(fname), rc)
     elseif (mode == 'read') then
       inquire(file=fname,exist=fexists)
@@ -6123,21 +6169,21 @@ module module_MEDIATOR
 !        call ESMF_FieldBundleRead (FB, fname, &
 !          singleFile=.true., iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
 !        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!          line=6203, file="module_MEDIATOR.F90")) call ESMF_LogWrite(trim(subname)//' WARNING missing fields',rc=dbrc)
+!          line=6251, file="module_MEDIATOR.F90")) call ESMF_LogWrite(trim(subname)//' WARNING missing fields',rc=dbrc)
 !-----------------------------------------------------------------------------------------------------
         call ESMF_FieldBundleGet(FB, fieldCount=fieldCount, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6207, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6255, file="module_MEDIATOR.F90")) return  ! bail out
         do n = 1,fieldCount
           call fieldBundle_getName(FB, n, name, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6211, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6259, file="module_MEDIATOR.F90")) return  ! bail out
           call fieldBundle_getFieldN(FB, n, field, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6214, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6262, file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_FieldRead (field, fname, iofmt=ESMF_IOFMT_NETCDF, rc=rc)  
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6217, file="module_MEDIATOR.F90")) call ESMF_LogWrite(trim(subname)//' WARNING missing field '//trim(name),rc=dbrc)
+            line=6265, file="module_MEDIATOR.F90")) call ESMF_LogWrite(trim(subname)//' WARNING missing field '//trim(name),rc=dbrc)
         enddo
 
         call fieldBundle_diagnose(FB, 'read '//trim(fname), rc)
@@ -6295,11 +6341,11 @@ module module_MEDIATOR
 
     call fieldBundle_getFieldN(FBsrc, 1, fldsrc, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6484, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6532, file="module_MEDIATOR.F90")) return  ! bail out
 
     call fieldBundle_getFieldN(FBdst, 1, flddst, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6488, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6536, file="module_MEDIATOR.F90")) return  ! bail out
 
     !---------------------------------------------------
     !--- bilinear
@@ -6314,14 +6360,14 @@ module module_MEDIATOR
         factorList=factorList, ignoreDegenerate=.true., &
         unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6503, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6551, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call NUOPC_Write(factorList, "array_med_"//trim(lstring)//"_bilnr.nc", rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6514, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6562, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_RouteHandlePrint(bilnrmap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6517, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6565, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(bilnrmap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH bilnr", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6343,14 +6389,14 @@ module module_MEDIATOR
         factorList=factorList, ignoreDegenerate=.true., &
         unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6539, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6587, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call NUOPC_Write(factorList, "array_med_"//trim(lstring)//"_consf.nc", rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6550, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6598, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_RouteHandlePrint(consfmap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6553, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6601, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(consfmap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH consf", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6372,14 +6418,14 @@ module module_MEDIATOR
         factorList=factorList, ignoreDegenerate=.true., &
         unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6575, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6623, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call NUOPC_Write(factorList, "array_med_"//trim(lstring)//"_consd.nc", rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6579, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6627, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_RouteHandlePrint(consdmap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6582, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6630, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(consdmap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH consd", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6400,14 +6446,14 @@ module module_MEDIATOR
         factorList=factorList, ignoreDegenerate=.true., &
         unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6603, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6651, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call NUOPC_Write(factorList, "array_med_"//trim(lstring)//"_nearest.nc", rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6607, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6655, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_RouteHandlePrint(nearestmap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6610, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6658, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(nearestmap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH nearest", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6429,14 +6475,14 @@ module module_MEDIATOR
         factorList=factorList, ignoreDegenerate=.true., &
         unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6632, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6680, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call NUOPC_Write(factorList, "array_med_"//trim(lstring)//"_patch.nc", rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6636, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6684, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_RouteHandlePrint(patchmap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6639, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6687, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(patchmap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH patch", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6454,11 +6500,11 @@ module module_MEDIATOR
         routehandle=fcopymap, &
         ignoreUnmatchedIndices=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6657, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6705, file="module_MEDIATOR.F90")) return  ! bail out
       if (rhprint_flag) then
         call ESMF_RouteHandlePrint(fcopymap, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6661, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6709, file="module_MEDIATOR.F90")) return  ! bail out
       endif
       if (ESMF_RouteHandleIsCreated(fcopymap, rc=rc)) then
         call ESMF_LogWrite(trim(subname)//trim(lstring)//": computed RH fcopy", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6504,13 +6550,13 @@ module module_MEDIATOR
 
     call ESMF_GridGet(gridold, dimCount=dimCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6707, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6755, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(gridEdgeLWidth(dimCount),gridEdgeUWidth(dimCount))
     call ESMF_GridGet(gridold,distgrid=distgrid, coordSys=coordSys, indexflag=indexflag, dimCount=dimCount, &
        gridEdgeLWidth=gridEdgeLWidth, gridEdgeUWidth=gridEdgeUWidth, localDECount=localDECount, rc=rc)
 !       localDECount=localDECount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6713, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6761, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_LogWrite(trim(subname)//": tcxB", ESMF_LOGMSG_INFO, rc=dbrc)
 
@@ -6530,56 +6576,56 @@ module module_MEDIATOR
     gridnew = ESMF_GridCreate(distgrid=distgrid, coordSys=coordSys, indexflag=indexflag, &
        gridEdgeLWidth=gridEdgeLWidth, gridEdgeUWidth=gridEdgeUWidth, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6733, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6781, file="module_MEDIATOR.F90")) return  ! bail out
     deallocate(gridEdgeLWidth, gridEdgeUWidth)
 
     call ESMF_GridAddCoord(gridnew, staggerLoc=ESMF_STAGGERLOC_CENTER, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6738, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6786, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_GridAddCoord(gridnew, staggerLoc=ESMF_STAGGERLOC_CORNER, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6741, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6789, file="module_MEDIATOR.F90")) return  ! bail out
 
     do localDE = 0,localDeCount-1
 
       call ESMF_GridGetCoord(gridold, coordDim=1, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=dataPtr1, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6748, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6796, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_GridGetCoord(gridnew, coordDim=1, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6752, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6800, file="module_MEDIATOR.F90")) return  ! bail out
       dataPtr2 = dataPtr1
 
       call ESMF_GridGetCoord(gridold, coordDim=2, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=dataPtr1, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6758, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6806, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_GridGetCoord(gridnew, coordDim=2, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6762, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6810, file="module_MEDIATOR.F90")) return  ! bail out
       dataPtr2 = dataPtr1
 
       call ESMF_GridGetCoord(gridold, coordDim=1, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=dataPtr1, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6768, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6816, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_GridGetCoord(gridnew, coordDim=1, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6772, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6820, file="module_MEDIATOR.F90")) return  ! bail out
       dataPtr2 = dataPtr1
 
       call ESMF_GridGetCoord(gridold, coordDim=2, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=dataPtr1, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6778, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6826, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_GridGetCoord(gridnew, coordDim=2, localDE=localDE,  &
         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=dataPtr2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6782, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6830, file="module_MEDIATOR.F90")) return  ! bail out
       dataPtr2 = dataPtr1
 
     enddo
@@ -6625,22 +6671,22 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FBin, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6828, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6876, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FBin, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6832, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6880, file="module_MEDIATOR.F90")) return  ! bail out
     if (present(grid)) then
       call fieldBundle_init(FBout, fieldNameList=fieldNameList, grid=grid, name=trim(lname), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6836, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6884, file="module_MEDIATOR.F90")) return  ! bail out
     else
       call ESMF_FieldBundleGet(FBin, grid=lgrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6840, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6888, file="module_MEDIATOR.F90")) return  ! bail out
       call fieldBundle_init(FBout, fieldNameList=fieldNameList, grid=lgrid, name=trim(lname), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6843, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6891, file="module_MEDIATOR.F90")) return  ! bail out
     endif
     deallocate(fieldNameList)
 
@@ -6697,16 +6743,16 @@ module module_MEDIATOR
 
     FieldBundle = ESMF_FieldBundleCreate(name=trim(lname), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6900, file="module_MEDIATOR.F90")) return  ! bail out
+      line=6948, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (present(fieldNameList)) then
       do n = 1, size(fieldNameList)
         field = ESMF_FieldCreate(grid, ESMF_TYPEKIND_R8, name=fieldNameList(n), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6906, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6954, file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_FieldBundleAdd(FieldBundle, (/field/), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=6909, file="module_MEDIATOR.F90")) return  ! bail out
+          line=6957, file="module_MEDIATOR.F90")) return  ! bail out
         if (dbug_flag > 1) then
           call ESMF_LogWrite(trim(subname)//":"//trim(lname)//":add  "//trim(fieldNameList(n)), ESMF_LOGMSG_INFO, rc=dbrc)
         endif
@@ -6716,19 +6762,19 @@ module module_MEDIATOR
     if (present(State)) then
       call ESMF_StateGet(State, itemCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6919, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6967, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(lfieldNameList(fieldCount))
       call ESMF_StateGet(State, itemNameList=lfieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=6923, file="module_MEDIATOR.F90")) return  ! bail out
+        line=6971, file="module_MEDIATOR.F90")) return  ! bail out
       do n = 1, fieldCount
         if (present(grid)) then
           field = ESMF_FieldCreate(grid, ESMF_TYPEKIND_R8, name=lfieldNameList(n), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6928, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6976, file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_FieldBundleAdd(FieldBundle, (/field/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6931, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6979, file="module_MEDIATOR.F90")) return  ! bail out
           if (dbug_flag > 1) then
             call ESMF_LogWrite(trim(subname)//":"//trim(lname)//":add  "//trim(lfieldNameList(n)), ESMF_LOGMSG_INFO, rc=dbrc)
           endif
@@ -6736,17 +6782,17 @@ module module_MEDIATOR
         else
           call ESMF_StateGet(State, itemName=trim(lfieldNameList(n)), field=lfield, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6939, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6987, file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_FieldGet(lfield, grid=lgrid, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6942, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6990, file="module_MEDIATOR.F90")) return  ! bail out
 
           field = ESMF_FieldCreate(lgrid, ESMF_TYPEKIND_R8, name=lfieldNameList(n), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6946, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6994, file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_FieldBundleAdd(FieldBundle, (/field/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=6949, file="module_MEDIATOR.F90")) return  ! bail out
+            line=6997, file="module_MEDIATOR.F90")) return  ! bail out
           if (dbug_flag > 1) then
             call ESMF_LogWrite(trim(subname)//":"//trim(lname)//":add  "//trim(lfieldNameList(n)), ESMF_LOGMSG_INFO, rc=dbrc)
           endif
@@ -6757,7 +6803,7 @@ module module_MEDIATOR
 
     call fieldBundle_reset(FieldBundle, value=spval_init, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6960, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7008, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6789,10 +6835,10 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FieldBundle, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=6992, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7040, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (fieldnum > fieldCount) then
-      call ESMF_LogWrite(trim(subname)//": ERROR fieldnum > fieldCount ", ESMF_LOGMSG_ERROR, line=6995, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR fieldnum > fieldCount ", ESMF_LOGMSG_ERROR, line=7043, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
@@ -6800,7 +6846,7 @@ module module_MEDIATOR
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FieldBundle, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7003, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7051, file="module_MEDIATOR.F90")) return  ! bail out
 
     fieldname = fieldNameList(fieldnum)
 
@@ -6834,11 +6880,11 @@ module module_MEDIATOR
 
     call fieldBundle_getName(FieldBundle, fieldnum, name, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7037, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7085, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_FieldBundleGet(FieldBundle, fieldName=name, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7041, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7089, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6867,7 +6913,7 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FieldBundle, fieldName=fieldname, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7070, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7118, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -6898,22 +6944,22 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FieldBundle, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7101, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7149, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FieldBundle, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7105, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7153, file="module_MEDIATOR.F90")) return  ! bail out
     do n = 1, fieldCount
       call ESMF_FieldBundleGet(FieldBundle, fieldName=fieldNameList(n), field=field, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7109, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7157, file="module_MEDIATOR.F90")) return  ! bail out
       call ESMF_FieldDestroy(field, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7112, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7160, file="module_MEDIATOR.F90")) return  ! bail out
     enddo
     call ESMF_FieldBundleDestroy(FieldBundle, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7116, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7164, file="module_MEDIATOR.F90")) return  ! bail out
     deallocate(fieldNameList)
 
     if (dbug_flag > 10) then
@@ -6953,15 +6999,15 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FieldBundle, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7156, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7204, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FieldBundle, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7160, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7208, file="module_MEDIATOR.F90")) return  ! bail out
     do n = 1, fieldCount
       call FieldBundle_GetFldPtr(FieldBundle, fieldNameList(n), dataPtr, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7164, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7212, file="module_MEDIATOR.F90")) return  ! bail out
 
       do j=lbound(dataPtr,2),ubound(dataPtr,2)
       do i=lbound(dataPtr,1),ubound(dataPtr,1)
@@ -7005,13 +7051,13 @@ module module_MEDIATOR
 
       call FieldBundle_GetFldPtr(FBin, trim(fldin), dataPtrIn, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7208, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7256, file="module_MEDIATOR.F90")) return  ! bail out
       call FieldBundle_GetFldPtr(FBout, trim(fldout), dataPtrOut, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7211, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7259, file="module_MEDIATOR.F90")) return  ! bail out
 
       if (.not.FldPtr_SameCheck(dataPtrIn, dataPtrOut, subname, rc)) then
-        call ESMF_LogWrite(trim(subname)//": ERROR fname not present with FBin", ESMF_LOGMSG_ERROR, line=7214, file="module_MEDIATOR.F90", rc=dbrc)
+        call ESMF_LogWrite(trim(subname)//": ERROR fname not present with FBin", ESMF_LOGMSG_ERROR, line=7262, file="module_MEDIATOR.F90", rc=dbrc)
         rc = ESMF_FAILURE
         return
       endif
@@ -7107,7 +7153,7 @@ module module_MEDIATOR
         if (fldlist%mapping(n) == 'bilinear') then
           if (.not. okbilnr) then
             call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR RH not available for "//trim(fldlist%mapping(n))// &
-              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7310, file="module_MEDIATOR.F90", rc=dbrc)
+              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7358, file="module_MEDIATOR.F90", rc=dbrc)
             rc = ESMF_FAILURE
             return
           endif
@@ -7115,12 +7161,12 @@ module module_MEDIATOR
                                        FBout,fldlist%shortname(n), &
                                        bilnrmap,rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=7318, file="module_MEDIATOR.F90")) return  ! bail out
+            line=7366, file="module_MEDIATOR.F90")) return  ! bail out
 
         elseif (fldlist%mapping(n) == "conservefrac") then
           if (.not. okconsf) then
             call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR RH not available for "//trim(fldlist%mapping(n))// &
-              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7323, file="module_MEDIATOR.F90", rc=dbrc)
+              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7371, file="module_MEDIATOR.F90", rc=dbrc)
             rc = ESMF_FAILURE
             return
           endif
@@ -7128,12 +7174,12 @@ module module_MEDIATOR
                                        FBout,fldlist%shortname(n), &
                                        consfmap, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=7331, file="module_MEDIATOR.F90")) return  ! bail out
+            line=7379, file="module_MEDIATOR.F90")) return  ! bail out
 
         elseif (fldlist%mapping(n) == "conservedst") then
           if (.not. okconsd) then
             call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR RH not available for "//trim(fldlist%mapping(n))// &
-              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7336, file="module_MEDIATOR.F90", rc=dbrc)
+              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7384, file="module_MEDIATOR.F90", rc=dbrc)
             rc = ESMF_FAILURE
             return
           endif
@@ -7141,12 +7187,12 @@ module module_MEDIATOR
                                        FBout,fldlist%shortname(n), &
                                        consdmap, rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=7344, file="module_MEDIATOR.F90")) return  ! bail out
+            line=7392, file="module_MEDIATOR.F90")) return  ! bail out
 
         elseif (fldlist%mapping(n) == 'patch') then
           if (.not. okpatch) then
             call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR RH not available for "//trim(fldlist%mapping(n))// &
-              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7349, file="module_MEDIATOR.F90", rc=dbrc)
+              ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7397, file="module_MEDIATOR.F90", rc=dbrc)
             rc = ESMF_FAILURE
             return
           endif
@@ -7154,7 +7200,7 @@ module module_MEDIATOR
                                        FBout,fldlist%shortname(n), &
                                        patchmap,rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=7357, file="module_MEDIATOR.F90")) return  ! bail out
+            line=7405, file="module_MEDIATOR.F90")) return  ! bail out
 
         elseif (fldlist%mapping(n) == 'copy') then
           !-------------------------------------------
@@ -7164,29 +7210,29 @@ module module_MEDIATOR
           if (.not. okfcopy) then
             if (.not. okconsf) then
               call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR RH not available for "//trim(fldlist%mapping(n))// &
-                ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7367, file="module_MEDIATOR.F90", rc=dbrc)
+                ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7415, file="module_MEDIATOR.F90", rc=dbrc)
               rc = ESMF_FAILURE
               return
             else
               call ESMF_LogWrite(trim(subname)//trim(lstring)//": NOTE using conservative instead of copy for"// &
-                " fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_INFO, line=7372, file="module_MEDIATOR.F90", rc=dbrc)
+                " fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_INFO, line=7420, file="module_MEDIATOR.F90", rc=dbrc)
               call FieldBundle_FieldRegrid(FBin ,fldlist%shortname(n), &
                                            FBout,fldlist%shortname(n), &
                                            consfmap,rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=7377, file="module_MEDIATOR.F90")) return  ! bail out
+                line=7425, file="module_MEDIATOR.F90")) return  ! bail out
             endif
           else
             call FieldBundle_FieldRegrid(FBin ,fldlist%shortname(n), &
                                          FBout,fldlist%shortname(n), &
                                          fcopymap,rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=7384, file="module_MEDIATOR.F90")) return  ! bail out
+              line=7432, file="module_MEDIATOR.F90")) return  ! bail out
           endif
 
         else
           call ESMF_LogWrite(trim(subname)//trim(lstring)//": ERROR unrecognized mapping "//trim(fldlist%mapping(n))// &
-            ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7389, file="module_MEDIATOR.F90", rc=dbrc)
+            ": fld="//trim(fldlist%shortname(n)), ESMF_LOGMSG_ERROR, line=7437, file="module_MEDIATOR.F90", rc=dbrc)
           rc = ESMF_FAILURE
           return
         endif
@@ -7257,7 +7303,7 @@ module module_MEDIATOR
                                        FBout,fldlist%shortname(n), &
                                        nearestmap,rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=7460, file="module_MEDIATOR.F90")) return  ! bail out
+            line=7508, file="module_MEDIATOR.F90")) return  ! bail out
       endif
     enddo
   end subroutine Fieldbundle_Regrid2
@@ -7289,15 +7335,15 @@ module module_MEDIATOR
 
       call FieldBundle_GetFieldName(FBin, trim(fldin), field1, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7492, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7540, file="module_MEDIATOR.F90")) return  ! bail out
       call FieldBundle_GetFieldName(FBout, trim(fldout), field2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7495, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7543, file="module_MEDIATOR.F90")) return  ! bail out
 
       call ESMF_FieldRegrid(field1, field2, routehandle=RH, &
         termorderflag=ESMF_TERMORDER_SRCSEQ, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7500, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7548, file="module_MEDIATOR.F90")) return  ! bail out
     else
 
       if (dbug_flag > 1) then
@@ -7357,12 +7403,12 @@ module module_MEDIATOR
     rc=ESMF_SUCCESS
 
     if (.not. FieldBundle_FldChk(FBout, trim(fnameout), rc=rc)) then
-      call ESMF_LogWrite(trim(subname)//": WARNING output field not in FBout, skipping merge of: "//trim(fnameout), ESMF_LOGMSG_WARNING, line=7560, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": WARNING output field not in FBout, skipping merge of: "//trim(fnameout), ESMF_LOGMSG_WARNING, line=7608, file="module_MEDIATOR.F90", rc=dbrc)
       return
     endif
     call FieldBundle_GetFldPtr(FBout, trim(fnameout), dataOut, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7565, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7613, file="module_MEDIATOR.F90")) return  ! bail out
     lb1 = lbound(dataOut,1)
     ub1 = ubound(dataOut,1)
     lb2 = lbound(dataOut,2)
@@ -7376,7 +7422,7 @@ module module_MEDIATOR
         (present(FBinC) .and. .not.present(fnameC)) .or. &
         (present(FBinD) .and. .not.present(fnameD)) .or. &
         (present(FBinE) .and. .not.present(fnameE))) then
-      call ESMF_LogWrite(trim(subname)//": ERROR fname not present with FBin", ESMF_LOGMSG_ERROR, line=7579, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR fname not present with FBin", ESMF_LOGMSG_ERROR, line=7627, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
@@ -7414,7 +7460,7 @@ module module_MEDIATOR
       endif
     endif
     if (.not. FBinfound) then
-      call ESMF_LogWrite(trim(subname)//": WARNING field: "//trim(fname)//" :not found in FBin, skipping merge of: "//trim(fnameout), ESMF_LOGMSG_WARNING, line=7617, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": WARNING field: "//trim(fname)//" :not found in FBin, skipping merge of: "//trim(fnameout), ESMF_LOGMSG_WARNING, line=7665, file="module_MEDIATOR.F90", rc=dbrc)
       return
     endif
 
@@ -7428,7 +7474,7 @@ module module_MEDIATOR
         FBinfound = .true.
         call FieldBundle_GetFldPtr(FBinA, trim(fname), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7631, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7679, file="module_MEDIATOR.F90")) return  ! bail out
         if (present(wgtA)) then
           wgtfound = .true.
           wgt => wgtA
@@ -7439,7 +7485,7 @@ module module_MEDIATOR
         FBinfound = .true.
         call FieldBundle_GetFldPtr(FBinB, trim(fname), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7642, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7690, file="module_MEDIATOR.F90")) return  ! bail out
         if (present(wgtB)) then
           wgtfound = .true.
           wgt => wgtB
@@ -7450,7 +7496,7 @@ module module_MEDIATOR
         FBinfound = .true.
         call FieldBundle_GetFldPtr(FBinC, trim(fname), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7653, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7701, file="module_MEDIATOR.F90")) return  ! bail out
         if (present(wgtC)) then
           wgtfound = .true.
           wgt => wgtC
@@ -7461,7 +7507,7 @@ module module_MEDIATOR
         FBinfound = .true.
         call FieldBundle_GetFldPtr(FBinD, trim(fname), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7664, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7712, file="module_MEDIATOR.F90")) return  ! bail out
         if (present(wgtD)) then
           wgtfound = .true.
           wgt => wgtD
@@ -7472,7 +7518,7 @@ module module_MEDIATOR
         FBinfound = .true.
         call FieldBundle_GetFldPtr(FBinE, trim(fname), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7675, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7723, file="module_MEDIATOR.F90")) return  ! bail out
         if (present(wgtE)) then
           wgtfound = .true.
           wgt => wgtE
@@ -7482,14 +7528,14 @@ module module_MEDIATOR
 
       if (FBinfound) then
         if (.not.FldPtr_SameCheck(dataPtr, dataOut, subname, rc)) then
-          call ESMF_LogWrite(trim(subname)//": ERROR FBin wrong size", ESMF_LOGMSG_ERROR, line=7685, file="module_MEDIATOR.F90", rc=dbrc)
+          call ESMF_LogWrite(trim(subname)//": ERROR FBin wrong size", ESMF_LOGMSG_ERROR, line=7733, file="module_MEDIATOR.F90", rc=dbrc)
           rc = ESMF_FAILURE
           return
         endif
 
         if (wgtfound) then
           if (.not.FldPtr_SameCheck(dataPtr, wgt, subname, rc)) then
-            call ESMF_LogWrite(trim(subname)//": ERROR wgt wrong size", ESMF_LOGMSG_ERROR, line=7692, file="module_MEDIATOR.F90", rc=dbrc)
+            call ESMF_LogWrite(trim(subname)//": ERROR wgt wrong size", ESMF_LOGMSG_ERROR, line=7740, file="module_MEDIATOR.F90", rc=dbrc)
             rc = ESMF_FAILURE
             return
           endif
@@ -7546,15 +7592,15 @@ module module_MEDIATOR
 
     call ESMF_StateGet(State, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7749, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7797, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_StateGet(State, itemNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7753, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7801, file="module_MEDIATOR.F90")) return  ! bail out
     do n = 1, fieldCount
       call State_GetFldPtr(State, fieldNameList(n), dataPtr, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7757, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7805, file="module_MEDIATOR.F90")) return  ! bail out
 
       do j=lbound(dataPtr,2),ubound(dataPtr,2)
       do i=lbound(dataPtr,1),ubound(dataPtr,1)
@@ -7599,21 +7645,21 @@ module module_MEDIATOR
 !      call ESMF_LogWrite(trim(subname)//": WARNING count is 0 set avg to spval", ESMF_LOGMSG_INFO, rc=dbrc)
 !      call fieldBundle_reset(FieldBundle, value=spval, rc=rc)
 !      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=7802, file="module_MEDIATOR.F90")) return  ! bail out
+!        line=7850, file="module_MEDIATOR.F90")) return  ! bail out
 
     else
 
       call ESMF_FieldBundleGet(FieldBundle, fieldCount=fieldCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7808, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7856, file="module_MEDIATOR.F90")) return  ! bail out
       allocate(fieldNameList(fieldCount))
       call ESMF_FieldBundleGet(FieldBundle, fieldNameList=fieldNameList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7812, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7860, file="module_MEDIATOR.F90")) return  ! bail out
       do n = 1, fieldCount
         call FieldBundle_GetFldPtr(FieldBundle, fieldNameList(n), dataPtr, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=7816, file="module_MEDIATOR.F90")) return  ! bail out
+          line=7864, file="module_MEDIATOR.F90")) return  ! bail out
 
         do j=lbound(dataPtr,2),ubound(dataPtr,2)
         do i=lbound(dataPtr,1),ubound(dataPtr,1)
@@ -7661,15 +7707,15 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FieldBundle, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7864, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7912, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FieldBundle, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7868, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7916, file="module_MEDIATOR.F90")) return  ! bail out
     do n = 1, fieldCount
       call FieldBundle_GetFldPtr(FieldBundle, fieldNameList(n), dataPtr, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7872, file="module_MEDIATOR.F90")) return  ! bail out
+        line=7920, file="module_MEDIATOR.F90")) return  ! bail out
       write(msgString,'(A,3g14.7)') trim(subname)//' '//trim(lstring)//':'//trim(fieldNameList(n)), &
         minval(dataPtr),maxval(dataPtr),sum(dataPtr)
       call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7712,7 +7758,7 @@ module module_MEDIATOR
 
     call ESMF_ArrayGet(Array, farrayPtr=dataPtr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7915, file="module_MEDIATOR.F90")) return  ! bail out
+      line=7963, file="module_MEDIATOR.F90")) return  ! bail out
     write(msgString,'(A,3g14.7)') trim(subname)//' '//trim(lstring), &
         minval(dataPtr),maxval(dataPtr),sum(dataPtr)
     call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7753,15 +7799,15 @@ module module_MEDIATOR
 
     call ESMF_StateGet(State, itemCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7956, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8004, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_StateGet(State, itemNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7960, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8008, file="module_MEDIATOR.F90")) return  ! bail out
     do n = 1, fieldCount
       call State_GetFldPtr(State, fieldNameList(n), dataPtr, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=7964, file="module_MEDIATOR.F90")) return  ! bail out
+        line=8012, file="module_MEDIATOR.F90")) return  ! bail out
       write(msgString,'(A,3g14.7)') trim(subname)//' '//trim(lstring)//':'//trim(fieldNameList(n)), &
         minval(dataPtr),maxval(dataPtr),sum(dataPtr)
       call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7793,7 +7839,7 @@ module module_MEDIATOR
 
     call fieldBundle_accum(FBout, FBin, copy=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=7996, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8044, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7820,7 +7866,7 @@ module module_MEDIATOR
 
     call fieldBundle_accum(STout, FBin, copy=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8023, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8071, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7847,7 +7893,7 @@ module module_MEDIATOR
 
     call fieldBundle_accum(FBout, STin, copy=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8050, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8098, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -7889,26 +7935,26 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FBout, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8092, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8140, file="module_MEDIATOR.F90")) return  ! bail out
     allocate(fieldNameList(fieldCount))
     call ESMF_FieldBundleGet(FBout, fieldNameList=fieldNameList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8096, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8144, file="module_MEDIATOR.F90")) return  ! bail out
 
     do n = 1, fieldCount
       call ESMF_FieldBundleGet(FBin, fieldName=fieldNameList(n), isPresent=exists, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=8101, file="module_MEDIATOR.F90")) return  ! bail out
+        line=8149, file="module_MEDIATOR.F90")) return  ! bail out
       if (exists) then
         call FieldBundle_GetFldPtr(FBin,  fieldNameList(n), dataPtri, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8105, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8153, file="module_MEDIATOR.F90")) return  ! bail out
         call FieldBundle_GetFldPtr(FBout, fieldNameList(n), dataPtro, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8108, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8156, file="module_MEDIATOR.F90")) return  ! bail out
 
         if (.not.FldPtr_SameCheck(dataPtro, dataPtri, subname, rc)) then
-           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8111, file="module_MEDIATOR.F90", rc=rc)
+           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8159, file="module_MEDIATOR.F90", rc=rc)
            return
         endif
 
@@ -7973,18 +8019,18 @@ module module_MEDIATOR
     do n = 1, fieldCount
       call ESMF_StateGet(STin, itemName=fieldNameList(n), itemType=itemType, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=8176, file="module_MEDIATOR.F90")) return  ! bail out
+        line=8224, file="module_MEDIATOR.F90")) return  ! bail out
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
 
         call State_GetFldPtr(STin, fieldNameList(n), dataPtrS, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8181, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8229, file="module_MEDIATOR.F90")) return  ! bail out
         call FieldBundle_GetFldPtr(FBout, fieldNameList(n), dataPtrB, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8184, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8232, file="module_MEDIATOR.F90")) return  ! bail out
 
         if (.not.FldPtr_SameCheck(dataPtrS, dataPtrB, subname, rc)) then
-           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8187, file="module_MEDIATOR.F90", rc=rc)
+           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8235, file="module_MEDIATOR.F90", rc=rc)
            return
         endif
 
@@ -8050,18 +8096,18 @@ module module_MEDIATOR
     do n = 1, fieldCount
       call ESMF_StateGet(STout, itemName=fieldNameList(n), itemType=itemType, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=8253, file="module_MEDIATOR.F90")) return  ! bail out
+        line=8301, file="module_MEDIATOR.F90")) return  ! bail out
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
 
         call FieldBundle_GetFldPtr(FBin, fieldNameList(n), dataPtrB, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8258, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8306, file="module_MEDIATOR.F90")) return  ! bail out
         call State_GetFldPtr(STout, fieldNameList(n), dataPtrS, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=8261, file="module_MEDIATOR.F90")) return  ! bail out
+          line=8309, file="module_MEDIATOR.F90")) return  ! bail out
 
         if (.not.FldPtr_SameCheck(dataPtrS, dataPtrB, subname, rc)) then
-           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8264, file="module_MEDIATOR.F90", rc=rc)
+           call ESMF_LogWrite(trim(subname)//": ERROR in dataPtr size ", ESMF_LOGMSG_ERROR, line=8312, file="module_MEDIATOR.F90", rc=rc)
            return
         endif
 
@@ -8109,7 +8155,7 @@ module module_MEDIATOR
 
     call ESMF_FieldBundleGet(FB, fieldName=trim(fldname), isPresent=isPresent, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8312, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8360, file="module_MEDIATOR.F90")) return  ! bail out
     if (isPresent) then
        FieldBundle_FldChk = .true.
     endif
@@ -8138,17 +8184,17 @@ module module_MEDIATOR
     rc = ESMF_SUCCESS
 
     if (.not. FieldBundle_FldChk(FB, trim(fldname), rc=rc)) then
-      call ESMF_LogWrite(trim(subname)//": ERROR field not in FB "//trim(fldname), ESMF_LOGMSG_ERROR, line=8341, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR field not in FB "//trim(fldname), ESMF_LOGMSG_ERROR, line=8389, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
 
     call ESMF_FieldBundleGet(FB, fieldName=trim(fldname), field=lfield, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8348, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8396, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_FieldGet(lfield, farrayPtr=fldptr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8351, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8399, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -8175,17 +8221,17 @@ module module_MEDIATOR
     rc = ESMF_SUCCESS
 
     if (.not. FieldBundle_FldChk(FB, trim(fldname), rc=rc)) then
-      call ESMF_LogWrite(trim(subname)//": ERROR field not in FB "//trim(fldname), ESMF_LOGMSG_ERROR, line=8378, file="module_MEDIATOR.F90", rc=dbrc)
+      call ESMF_LogWrite(trim(subname)//": ERROR field not in FB "//trim(fldname), ESMF_LOGMSG_ERROR, line=8426, file="module_MEDIATOR.F90", rc=dbrc)
       rc = ESMF_FAILURE
       return
     endif
 
     call ESMF_FieldBundleGet(FB, fieldName=trim(fldname), field=lfield, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8385, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8433, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_FieldGet(lfield, farrayPtr=fldptr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8388, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8436, file="module_MEDIATOR.F90")) return  ! bail out
 
     fldptr = val
 
@@ -8218,10 +8264,10 @@ module module_MEDIATOR
     endif
 !    call ESMF_StatePrint(ST,rc=dbrc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8421, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8469, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_FieldGet(lfield, farrayPtr=fldptr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8424, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8472, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -8253,10 +8299,10 @@ module module_MEDIATOR
     endif
 !    call ESMF_StatePrint(ST,rc=dbrc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8456, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8504, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_FieldGet(lfield, farrayPtr=fldptr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8459, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8507, file="module_MEDIATOR.F90")) return  ! bail out
 
     fldptr = val
 
@@ -8289,7 +8335,7 @@ module module_MEDIATOR
         ubound(fldptr2,1) /= ubound(fldptr1,1)) then
       call ESMF_LogWrite(trim(subname)//": ERROR in data size "//trim(cstring), ESMF_LOGMSG_ERROR, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=8492, file="module_MEDIATOR.F90")) return  ! bail out
+        line=8540, file="module_MEDIATOR.F90")) return  ! bail out
       write(msgString,*) trim(subname)//': fldptr2 ',lbound(fldptr2),ubound(fldptr2)
       call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO, rc=dbrc)
       write(msgString,*) trim(subname)//': fldptr1 ',lbound(fldptr1),ubound(fldptr1)
@@ -8323,25 +8369,25 @@ module module_MEDIATOR
 
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8526, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8574, file="module_MEDIATOR.F90")) return  ! bail out
       
     call Grid_Print(grid, string, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8530, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8578, file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_FieldGet(field,farrayPtr=dataptr,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8534, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8582, file="module_MEDIATOR.F90")) return  ! bail out
 
     write (msgString,*) trim(subname)//":"//trim(string)//": dataptr bounds dim=1 ",lbound(dataptr,1),ubound(dataptr,1)
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8539, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8587, file="module_MEDIATOR.F90")) return  ! bail out
 
     write (msgString,*) trim(subname)//":"//trim(string)//": dataptr bounds dim=2 ",lbound(dataptr,2),ubound(dataptr,2)
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8544, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8592, file="module_MEDIATOR.F90")) return  ! bail out
 
     if (dbug_flag > 10) then
       call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO, rc=dbrc)
@@ -8372,27 +8418,27 @@ module module_MEDIATOR
     ! access localDeCount to show this is a real Grid
     call ESMF_GridGet(grid, localDeCount=localDeCount, distgrid=distgrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8575, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8623, file="module_MEDIATOR.F90")) return  ! bail out
    
     write (msgString,*) trim(subname)//":"//trim(string)//": localDeCount=", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8580, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8628, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! get dimCount and tileCount
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8585, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8633, file="module_MEDIATOR.F90")) return  ! bail out
     
     write (msgString,*) trim(subname)//":"//trim(string)//": dimCount=", dimCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8590, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8638, file="module_MEDIATOR.F90")) return  ! bail out
 
     write (msgString,*) trim(subname)//":"//trim(string)//": tileCount=", tileCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8595, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8643, file="module_MEDIATOR.F90")) return  ! bail out
 
     ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
     allocate(minIndexPTile(dimCount, tileCount), &
@@ -8402,17 +8448,17 @@ module module_MEDIATOR
     call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
        maxIndexPTile=maxIndexPTile, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8605, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8653, file="module_MEDIATOR.F90")) return  ! bail out
       
     write (msgString,*) trim(subname)//":"//trim(string)//": minIndexPTile=", minIndexPTile
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8610, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8658, file="module_MEDIATOR.F90")) return  ! bail out
 
     write (msgString,*) trim(subname)//":"//trim(string)//": maxIndexPTile=", maxIndexPTile
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8615, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8663, file="module_MEDIATOR.F90")) return  ! bail out
 
     deallocate(minIndexPTile, maxIndexPTile)
 
@@ -8449,34 +8495,34 @@ module module_MEDIATOR
 
     call ESMF_ClockGet(clock,currtime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8652, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8700, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8655, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8703, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_LogWrite(trim(lstring)//": currtime = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
 
     call ESMF_ClockGet(clock,starttime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8660, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8708, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8663, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8711, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_LogWrite(trim(lstring)//": startime = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
 
     call ESMF_ClockGet(clock,stoptime=time,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8668, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8716, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeGet(time,timestring=timestr,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8671, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8719, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_LogWrite(trim(lstring)//": stoptime = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
 
     call ESMF_ClockGet(clock,timestep=timestep,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8676, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8724, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_TimeIntervalGet(timestep,timestring=timestr,rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8679, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8727, file="module_MEDIATOR.F90")) return  ! bail out
     call ESMF_LogWrite(trim(lstring)//": timestep = "//trim(timestr), ESMF_LOGMSG_INFO, rc=dbrc)
 
     if (dbug_flag > 5) then
@@ -8506,48 +8552,48 @@ module module_MEDIATOR
     ! -- centers --
 
     call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8709, file="module_MEDIATOR.F90")) return
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8757, file="module_MEDIATOR.F90")) return
     if (isPresent) then
       call ESMF_GridGetCoord(grid, coordDim=1, staggerLoc=ESMF_STAGGERLOC_CENTER, array=array, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8712, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8760, file="module_MEDIATOR.F90")) return
       call ESMF_ArraySet(array, name="lon_center", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8714, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8762, file="module_MEDIATOR.F90")) return
       call Array_diagnose(array,trim(string)//"_grid_coord1", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8716, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8764, file="module_MEDIATOR.F90")) return
       call ESMF_ArrayWrite(array, trim(string)//"_grid_coord1.nc", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8718, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8766, file="module_MEDIATOR.F90")) return
       call ESMF_GridGetCoord(grid, coordDim=2, staggerLoc=ESMF_STAGGERLOC_CENTER, array=array, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8720, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8768, file="module_MEDIATOR.F90")) return
       call ESMF_ArraySet(array, name="lat_center", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8722, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8770, file="module_MEDIATOR.F90")) return
       call Array_diagnose(array,trim(string)//"_grid_coord2", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8724, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8772, file="module_MEDIATOR.F90")) return
       call ESMF_ArrayWrite(array, trim(string)//"_grid_coord2.nc", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8726, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8774, file="module_MEDIATOR.F90")) return
     endif
 
     ! -- corners --
 
     call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER, isPresent=isPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8732, file="module_MEDIATOR.F90")) return
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8780, file="module_MEDIATOR.F90")) return
     if (isPresent) then
       call ESMF_GridGetCoord(grid, coordDim=1, staggerLoc=ESMF_STAGGERLOC_CORNER, array=array, rc=rc)
-      if (.not. ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8735, file="module_MEDIATOR.F90")) then
+      if (.not. ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8783, file="module_MEDIATOR.F90")) then
         call ESMF_ArraySet(array, name="lon_corner", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8737, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8785, file="module_MEDIATOR.F90")) return
         call Array_diagnose(array,trim(string)//"_grid_corner1", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8739, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8787, file="module_MEDIATOR.F90")) return
         call ESMF_ArrayWrite(array, trim(string)//"_grid_corner1.nc", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8741, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8789, file="module_MEDIATOR.F90")) return
       endif
       call ESMF_GridGetCoord(grid, coordDim=2, staggerLoc=ESMF_STAGGERLOC_CORNER, array=array, rc=rc)
-      if (.not. ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8744, file="module_MEDIATOR.F90")) then
+      if (.not. ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8792, file="module_MEDIATOR.F90")) then
         call ESMF_ArraySet(array, name="lat_corner", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8746, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8794, file="module_MEDIATOR.F90")) return
         call Array_diagnose(array,trim(string)//"_grid_corner2", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8748, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8796, file="module_MEDIATOR.F90")) return
         call ESMF_ArrayWrite(array, trim(string)//"_grid_corner2.nc", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8750, file="module_MEDIATOR.F90")) return
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8798, file="module_MEDIATOR.F90")) return
       endif
     endif
 
@@ -8555,31 +8601,31 @@ module module_MEDIATOR
     ! -- mask --
 
     call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, staggerLoc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8758, file="module_MEDIATOR.F90")) return
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8806, file="module_MEDIATOR.F90")) return
     if (isPresent) then
       call ESMF_GridGetItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_MASK, array=array, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8761, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8809, file="module_MEDIATOR.F90")) return
       call ESMF_ArraySet(array, name="mask", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8763, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8811, file="module_MEDIATOR.F90")) return
       call Array_diagnose(array,trim(string)//"_grid_mask", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8765, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8813, file="module_MEDIATOR.F90")) return
       call ESMF_ArrayWrite(array, trim(string)//"_grid_mask.nc", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8767, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8815, file="module_MEDIATOR.F90")) return
     endif
 
     ! -- area --
 
     call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_AREA, staggerLoc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8773, file="module_MEDIATOR.F90")) return
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8821, file="module_MEDIATOR.F90")) return
     if (isPresent) then
       call ESMF_GridGetItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, itemflag=ESMF_GRIDITEM_AREA, array=array, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8776, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8824, file="module_MEDIATOR.F90")) return
       call ESMF_ArraySet(array, name="area", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8778, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8826, file="module_MEDIATOR.F90")) return
       call Array_diagnose(array,trim(string)//"_grid_area", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8780, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8828, file="module_MEDIATOR.F90")) return
       call ESMF_ArrayWrite(array, trim(string)//"_grid_area.nc", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8782, file="module_MEDIATOR.F90")) return
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=8830, file="module_MEDIATOR.F90")) return
     endif
 
     if (dbug_flag > 10) then
@@ -8614,7 +8660,7 @@ module module_MEDIATOR
     call NUOPC_FieldDictionaryGetEntry(stdname, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=trim(subname)//&
       ": invalid stdname: "//trim(stdname), &
-      line=8817, file="module_MEDIATOR.F90")) return  ! bail out
+      line=8865, file="module_MEDIATOR.F90")) return  ! bail out
     
     ! potentially extend the existing lists
 
@@ -8710,12 +8756,12 @@ module module_MEDIATOR
     call ESMF_DistGridGet(distGrid1, &
       dimCount=dimCount1, tileCount=tileCount1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8913,file="module_MEDIATOR.F90")) return  ! bail out
+      line=8961,file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_DistGridGet(distGrid2, &
       dimCount=dimCount2, tileCount=tileCount2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8918,file="module_MEDIATOR.F90")) return  ! bail out
+      line=8966,file="module_MEDIATOR.F90")) return  ! bail out
 
     if ( dimCount1 /= dimCount2) then
       NEMS_DistGridMatch = .false.
@@ -8745,14 +8791,14 @@ module module_MEDIATOR
       minIndexPTile=minIndexPTile1, &
       maxIndexPTile=maxIndexPTile1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8948,file="module_MEDIATOR.F90")) return  ! bail out
+      line=8996,file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_DistGridGet(distGrid2, &
       elementCountPTile=elementCountPTile2, &
       minIndexPTile=minIndexPTile2, &
       maxIndexPTile=maxIndexPTile2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=8955,file="module_MEDIATOR.F90")) return  ! bail out
+      line=9003,file="module_MEDIATOR.F90")) return  ! bail out
 
     if ( ANY((elementCountPTile1 - elementCountPTile2) .NE. 0) ) then
       NEMS_DistGridMatch = .false.
@@ -8851,39 +8897,39 @@ module module_MEDIATOR
       dimCount=dimCountSrc, coordTypeKind=coordTypeKindSrc, &
       coordSys=coordSysSrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=9054,file="module_MEDIATOR.F90")) return  ! bail out
+        line=9102,file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_GridGet(gridDst, distGrid=distGridDst, &
       dimCount=dimCountDst, coordTypeKind=coordTypeKindDst, &
       coordSys=coordSysDst, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=9060,file="module_MEDIATOR.F90")) return  ! bail out
+        line=9108,file="module_MEDIATOR.F90")) return  ! bail out
 
     if (.NOT. NEMS_DistGridMatch(distGrid1=distGridSrc, distGrid2=distGridDst, rc=rc)) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": Unable to redistribute coordinates. DistGrids do not match.", &
-        line=9065, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9113, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( dimCountSrc /= dimCountDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": DIMCOUNT MISMATCH", &
-        line=9072, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9120, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( coordTypeKindSrc /= coordTypeKindDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": COORDTYPEKIND MISMATCH", &
-        line=9079, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9127, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( coordSysSrc /= coordSysDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": COORDSYS MISMATCH", &
-        line=9086, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9134, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
@@ -8892,29 +8938,29 @@ module module_MEDIATOR
       call ESMF_GridGetCoord(gridSrc, staggerloc=staggerloc(staggerlocIndex), &
         isPresent=isPresentSrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9095,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9143,file="module_MEDIATOR.F90")) return  ! bail out
       if(isPresentSrc) then
         call ESMF_GridGetCoord(gridSrc, coordDim=dimIndex, &
           staggerloc=staggerloc(staggerlocIndex), &
           array=coordArraySrc, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9101,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9149,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_GridGetCoord(gridDst, &
           staggerloc=staggerloc(staggerlocIndex), &
           isPresent=isPresentDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9106,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9154,file="module_MEDIATOR.F90")) return  ! bail out
         if(.NOT.isPresentDst) then
           call ESMF_GridAddCoord(gridDst, &
             staggerLoc=staggerloc(staggerlocIndex), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9111,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9159,file="module_MEDIATOR.F90")) return  ! bail out
         else
           if(l_compare .EQV. .TRUE.) then
             ! TODO: Compare existing coordinates
             call ESMF_LogSetError(ESMF_RC_NOT_IMPL, &
               msg=SUBNAME//": Cannot compare existing coordinates.", &
-              line=9117, file="module_MEDIATOR.F90", rcToReturn=rc)
+              line=9165, file="module_MEDIATOR.F90", rcToReturn=rc)
               return  ! bail out
           end if
         endif
@@ -8922,40 +8968,40 @@ module module_MEDIATOR
           staggerloc=staggerloc(staggerlocIndex), &
           array=coordArrayDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9125,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9173,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_ArrayGet(coordArraySrc, distGrid=distGridSrc, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9128,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9176,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_ArrayGet(coordArrayDst, distGrid=distGridDst, &
           dimCount=dimCountDst, deCount=deCountDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9132,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9180,file="module_MEDIATOR.F90")) return  ! bail out
         if (.NOT. NEMS_DistGridMatch(distGrid1=distGridSrc, distGrid2=distGridDst, rc=rc)) then
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
           msg=SUBNAME//": Unable to redistribute coordinates. DistGrids do not match.", &
-          line=9136, file="module_MEDIATOR.F90", rcToReturn=rc)
+          line=9184, file="module_MEDIATOR.F90", rcToReturn=rc)
           return  ! bail out
         endif
 
         if ( ANY( l_invert == dimIndex )) then
           call ESMF_GridCompGet(gridcomp, vm=vm, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9143,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9191,file="module_MEDIATOR.F90")) return  ! bail out
 
           call ESMF_VMGet(vm, localPet=localPet, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9147,file="module_MEDIATOR.F90")) return  ! bail out            
+            line=9195,file="module_MEDIATOR.F90")) return  ! bail out            
 
           if (localPet == 0) then
             call ESMF_DistGridGet(distGridDst, deCount=deCountDst, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=9152,file="module_MEDIATOR.F90")) return  ! bail out
+              line=9200,file="module_MEDIATOR.F90")) return  ! bail out
 
             allocate(elementCountPDeDst(deCountDst))
             call ESMF_DistGridGet(distGridDst, &
               elementCountPDe=elementCountPDeDst, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=9158,file="module_MEDIATOR.F90")) return  ! bail out
+              line=9206,file="module_MEDIATOR.F90")) return  ! bail out
 
             sumElementCountPDeDst = SUM(elementCountPDeDst)
             if (dbug_flag >= 2) then
@@ -8986,7 +9032,7 @@ module module_MEDIATOR
               routehandle=routehandle, factorList=factorList, &
               factorIndexList=factorIndexList, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=9189,file="module_MEDIATOR.F90")) return  ! bail out
+              line=9237,file="module_MEDIATOR.F90")) return  ! bail out
             deallocate(elementCountPDeDst)
             deallocate(factorList)
             deallocate(factorIndexList)
@@ -8994,32 +9040,32 @@ module module_MEDIATOR
             call ESMF_ArraySMMStore(srcArray=coordArraySrc, dstArray=coordArrayDst, &
               routehandle=routehandle, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=9197,file="module_MEDIATOR.F90")) return  ! bail out
+              line=9245,file="module_MEDIATOR.F90")) return  ! bail out
           endif
 
           call ESMF_ArraySMM(srcArray=coordArraySrc, dstArray=coordArrayDst, &
             routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9203,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9251,file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_ArraySMMRelease(routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9206,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9254,file="module_MEDIATOR.F90")) return  ! bail out
 
         else
           call ESMF_ArrayRedistStore(coordArraySrc, coordArrayDst, routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9211,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9259,file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_ArrayRedist(coordArraySrc, coordArrayDst, routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9214,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9262,file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_ArrayRedistRelease(routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9217,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9265,file="module_MEDIATOR.F90")) return  ! bail out
         endif
       else
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
           msg=SUBNAME//": SOURCE GRID MISSING STAGGER LOCATION", &
-          line=9222, file="module_MEDIATOR.F90", rcToReturn=rc)
+          line=9270, file="module_MEDIATOR.F90", rcToReturn=rc)
         return  ! bail out
       endif
     enddo
@@ -9085,39 +9131,39 @@ module module_MEDIATOR
       dimCount=dimCountSrc, coordTypeKind=coordTypeKindSrc, &
       coordSys=coordSysSrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=9288,file="module_MEDIATOR.F90")) return  ! bail out
+        line=9336,file="module_MEDIATOR.F90")) return  ! bail out
 
     call ESMF_GridGet(gridDst, distGrid=distGridDst, &
       dimCount=dimCountDst, coordTypeKind=coordTypeKindDst, &
       coordSys=coordSysDst, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=9294,file="module_MEDIATOR.F90")) return  ! bail out
+        line=9342,file="module_MEDIATOR.F90")) return  ! bail out
 
     if (.NOT. NEMS_DistGridMatch(distGrid1=distGridSrc, distGrid2=distGridDst, rc=rc)) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": Unable to redistribute coordinates. DistGrids do not match.", &
-        line=9299, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9347, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( dimCountSrc /= dimCountDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": DIMCOUNT MISMATCH", &
-        line=9306, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9354, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( coordTypeKindSrc /= coordTypeKindDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": COORDTYPEKIND MISMATCH", &
-        line=9313, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9361, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
     if ( coordSysSrc /= coordSysDst) then
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
         msg=SUBNAME//": COORDSYS MISMATCH", &
-        line=9320, file="module_MEDIATOR.F90", rcToReturn=rc)
+        line=9368, file="module_MEDIATOR.F90", rcToReturn=rc)
       return  ! bail out
     endif
 
@@ -9125,44 +9171,44 @@ module module_MEDIATOR
       call ESMF_GridGetItem(gridSrc, itemflag=item(itemIndex), &
         staggerloc=l_staggerloc, isPresent=isPresentSrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9328,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9376,file="module_MEDIATOR.F90")) return  ! bail out
       if(isPresentSrc) then
         call ESMF_GridGetItem(gridSrc, itemflag=item(itemIndex), &
           staggerloc=l_staggerloc, array=itemArraySrc, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9333,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9381,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_GridGetItem(gridDst, itemflag=item(itemIndex), &
           staggerloc=l_staggerloc, isPresent=isPresentDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9337,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9385,file="module_MEDIATOR.F90")) return  ! bail out
         if(.NOT.isPresentDst) then
           call ESMF_GridAddItem(gridDst, itemflag=item(itemIndex), &
             staggerLoc=l_staggerloc, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9342,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9390,file="module_MEDIATOR.F90")) return  ! bail out
         else
           if(l_compare .EQV. .TRUE.) then
             ! TODO: Compare existing coordinates
             call ESMF_LogSetError(ESMF_RC_NOT_IMPL, &
               msg=SUBNAME//": Cannot compare existing coordinates.", &
-              line=9348, file="module_MEDIATOR.F90", rcToReturn=rc)
+              line=9396, file="module_MEDIATOR.F90", rcToReturn=rc)
               return  ! bail out
           end if
         endif
         call ESMF_GridGetItem(gridDst, itemflag=item(itemIndex), &
           staggerloc=l_staggerloc, array=itemArrayDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9355,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9403,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_ArrayGet(itemArraySrc, distGrid=distGridSrc, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9358,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9406,file="module_MEDIATOR.F90")) return  ! bail out
         call ESMF_ArrayGet(itemArrayDst, distGrid=distGridDst, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=9361,file="module_MEDIATOR.F90")) return  ! bail out
+          line=9409,file="module_MEDIATOR.F90")) return  ! bail out
         if (.NOT. NEMS_DistGridMatch(distGrid1=distGridSrc, distGrid2=distGridDst, rc=rc)) then
           call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
             msg=SUBNAME//": Unable to redistribute coordinates. DistGrids do not match.", &
-            line=9365, file="module_MEDIATOR.F90", rcToReturn=rc)
+            line=9413, file="module_MEDIATOR.F90", rcToReturn=rc)
             return  ! bail out
         endif
 
@@ -9170,23 +9216,23 @@ module module_MEDIATOR
           ! TODO: Invert Item
             call ESMF_LogSetError(ESMF_RC_NOT_IMPL, &
               msg=SUBNAME//": Cannot invert item.", &
-              line=9373, file="module_MEDIATOR.F90", rcToReturn=rc)
+              line=9421, file="module_MEDIATOR.F90", rcToReturn=rc)
               return  ! bail out
         else
           call ESMF_ArrayRedistStore(itemArraySrc, itemArrayDst, routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9378,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9426,file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_ArrayRedist(itemArraySrc, itemArrayDst, routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9381,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9429,file="module_MEDIATOR.F90")) return  ! bail out
           call ESMF_ArrayRedistRelease(routehandle=routehandle, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=9384,file="module_MEDIATOR.F90")) return  ! bail out
+            line=9432,file="module_MEDIATOR.F90")) return  ! bail out
         endif
       else
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
           msg=SUBNAME//": SOURCE GRID MISSING ITEM", &
-          line=9389, file="module_MEDIATOR.F90", rcToReturn=rc)
+          line=9437, file="module_MEDIATOR.F90", rcToReturn=rc)
         return  ! bail out
       endif
     enddo
@@ -9215,14 +9261,14 @@ module module_MEDIATOR
     nullify(fieldList)
     call NUOPC_GetStateMemberLists(state, fieldList=fieldList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=9418, &
+      line=9466, &
       file="module_MEDIATOR.F90")) &
       return  ! bail out
 
     do i=1, size(fieldList)
       call NUOPCplus_UpdateTimestamp(fieldList(i), time, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=9425, &
+        line=9473, &
         file="module_MEDIATOR.F90")) &
         return  ! bail out
     enddo
@@ -9246,7 +9292,7 @@ module module_MEDIATOR
     call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, ms=ms, us=us, &
       ns=ns, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=9449, &
+      line=9497, &
       file="module_MEDIATOR.F90")) &
       return  ! bail out
     call ESMF_AttributeSet(field, &
@@ -9254,7 +9300,7 @@ module module_MEDIATOR
       convention="NUOPC", purpose="Instance", &
       attnestflag=ESMF_ATTNEST_ON, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=9457, &
+      line=9505, &
       file="module_MEDIATOR.F90")) &
       return  ! bail out
 
