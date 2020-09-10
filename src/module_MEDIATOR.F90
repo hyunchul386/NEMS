@@ -240,7 +240,8 @@ module module_MEDIATOR
   logical            :: atmocn_flux_from_atm = .true. ! where is atm/ocn flux computed
   logical            :: generate_landmask = .true.   ! landmask flag
 !
-  logical            :: bulk_method_ori = .true.      ! bulk method flag, original is default
+! logical            :: bulk_method_ori = .true.      ! bulk method flag, original is default
+  logical            :: bulk_method_ori = .false.      ! bulk method flag, original is default
 !
   integer            :: dbrc
   character(len=256) :: msgString
