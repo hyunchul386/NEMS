@@ -40,6 +40,9 @@ module module_MEDIATOR
   !              bilinear or path interpolation method is used in the future for regridding
   !              ice variables to other model components, changes in subroutine
   !              "MedPhase_prep_atm" is required. -B Li.
+  ! * 2020-07-14 The bulk formular was updated for using 10m U/V, 2mT and 2mQ,
+  !              instead of estimation from surface fields (control flag is bulk_method_ori
+  !              , of which the default is the original method) - H-C Lee.
   !-----------------------------------------------------------------------------
 
   use ESMF
@@ -236,6 +239,9 @@ module module_MEDIATOR
   logical            :: coldstart = .false.           ! coldstart flag
   logical            :: atmocn_flux_from_atm = .true. ! where is atm/ocn flux computed
   logical            :: generate_landmask = .true.   ! landmask flag
+!
+  logical            :: bulk_method_ori = .false.      ! bulk method flag, original is default
+!
   integer            :: dbrc
   character(len=256) :: msgString
   logical            :: isPresent
@@ -577,18 +583,20 @@ module module_MEDIATOR
     call fld_list_add(fldsFrAtm,"inst_down_lw_flx"        , "will provide","conservefrac")
 !    call fld_list_add(fldsFrAtm,"inst_up_lw_flx"          , "will provide","conservefrac")
     call fld_list_add(fldsFrAtm,"inst_down_sw_flx"        , "will provide","conservefrac")
-    call fld_list_add(fldsFrAtm,"inst_temp_height2m"      , "will provide","bilinear")
-    call fld_list_add(fldsFrAtm,"inst_spec_humid_height2m", "will provide","bilinear")
 #ifdef PATCH_BFB_FIXED
     call fld_list_add(fldsFrAtm,"inst_u_wind_height10m"     , "will provide","patch")
     call fld_list_add(fldsFrAtm,"inst_v_wind_height10m"     , "will provide","patch")
     call fld_list_add(fldsFrAtm,"inst_zonal_wind_height10m" , "will provide","patch")
     call fld_list_add(fldsFrAtm,"inst_merid_wind_height10m" , "will provide","patch")
+    call fld_list_add(fldsFrAtm,"inst_temp_height2m"      , "will provide","patch")
+    call fld_list_add(fldsFrAtm,"inst_spec_humid_height2m", "will provide","patch")
 #else
     call fld_list_add(fldsFrAtm,"inst_u_wind_height10m"     , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_v_wind_height10m"     , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_zonal_wind_height10m" , "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_merid_wind_height10m" , "will provide","bilinear")
+    call fld_list_add(fldsFrAtm,"inst_temp_height2m"      , "will provide","bilinear")
+    call fld_list_add(fldsFrAtm,"inst_spec_humid_height2m", "will provide","bilinear")
 #endif
     call fld_list_add(fldsFrAtm,"inst_temp_height_surface", "will provide","bilinear")
     call fld_list_add(fldsFrAtm,"inst_pres_height_surface", "will provide","bilinear")
@@ -4890,8 +4898,16 @@ module module_MEDIATOR
     type(InternalState)         :: is_local
     integer                     :: i,j,n
     character(ESMF_MAXSTR) ,pointer  :: fieldNameList(:)
+
+! 
     real(ESMF_KIND_R8), pointer :: zbot(:,:),ubot(:,:),vbot(:,:),thbot(:,:), &
                                    qbot(:,:),rbot(:,:),tbot(:,:), pbot(:,:)
+    real(ESMF_KIND_R8), pointer :: u10m(:,:),v10m(:,:),t2m(:,:),q2m(:,:), &
+                                   mtaux(:,:),mtauy(:,:)
+    real(ESMF_KIND_R8), pointer :: u10m2(:,:),v10m2(:,:),t2m2(:,:),q2m2(:,:), &
+                                   mtaux2(:,:),mtauy2(:,:)
+    real(ESMF_KIND_R8)          :: u10m1(1),v10m1(1),t2m1(1),q2m1(1), &
+                                   mtaux1(1),mtauy1(1),th2m1(1)
     real(ESMF_KIND_R8), pointer :: us  (:,:),vs  (:,:),ts  (:,:),mask(:,:)
     real(ESMF_KIND_R8), pointer :: sen (:,:),lat (:,:),lwup(:,:),evap(:,:), &
                                    taux(:,:),tauy(:,:),tref(:,:),qref(:,:),duu10n(:,:)
@@ -4901,6 +4917,8 @@ module module_MEDIATOR
     real(ESMF_KIND_R8)          :: us1  (1),vs1  (1),ts1  (1)
     real(ESMF_KIND_R8)          :: sen1 (1),lat1 (1),lwup1(1),evap1(1), &
                                    taux1(1),tauy1(1),tref1(1),qref1(1),duu10n1(1)
+! 
+
 !BL2017
     integer                     :: fieldCount
     real(ESMF_KIND_R8), pointer :: zbot2(:,:),ubot2(:,:),vbot2(:,:)
@@ -5038,22 +5056,74 @@ module module_MEDIATOR
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
 
-    do j=lbound(zbot,2),ubound(zbot,2)
-    do i=lbound(zbot,1),ubound(zbot,1)
-    if(tbot(i,j).eq.0._ESMF_KIND_R8.and.abs(tbot2(i,j)).gt.0._ESMF_KIND_R8) then
-    zbot(i,j)=zbot2(i,j)
-    tbot(i,j)=tbot2(i,j)
-    ubot(i,j)=ubot2(i,j)
-    vbot(i,j)=vbot2(i,j)
-    qbot(i,j)=qbot2(i,j)
-    pbot(i,j)=pbot2(i,j)
+! 
+    if (bulk_method_ori) then
+      do j=lbound(zbot,2),ubound(zbot,2)
+      do i=lbound(zbot,1),ubound(zbot,1)
+      if(tbot(i,j).eq.0._ESMF_KIND_R8.and.abs(tbot2(i,j)).gt.0._ESMF_KIND_R8) then
+      zbot(i,j)=zbot2(i,j)
+      tbot(i,j)=tbot2(i,j)
+      ubot(i,j)=ubot2(i,j)
+      vbot(i,j)=vbot2(i,j)
+      qbot(i,j)=qbot2(i,j)
+      pbot(i,j)=pbot2(i,j)
+      endif
+      enddo
+      enddo
+      deallocate(fieldNameList)
+    else
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_u_wind_height10m', u10m2, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+  
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_v_wind_height10m', v10m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_v_wind_height10m', v10m2, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+  
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height2m', t2m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_temp_height2m', t2m2, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+  
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height2m', q2m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm2_o, 'inst_spec_humid_height2m', q2m2, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+  
+      do j=lbound(zbot,2),ubound(zbot,2)
+      do i=lbound(zbot,1),ubound(zbot,1)
+      if(tbot(i,j).eq.0._ESMF_KIND_R8.and.abs(tbot2(i,j)).gt.0._ESMF_KIND_R8) then
+      zbot(i,j)=zbot2(i,j)
+      tbot(i,j)=tbot2(i,j)
+      ubot(i,j)=ubot2(i,j)
+      vbot(i,j)=vbot2(i,j)
+      qbot(i,j)=qbot2(i,j)
+      pbot(i,j)=pbot2(i,j)
+      u10m(i,j)=u10m2(i,j) 
+      v10m(i,j)=v10m2(i,j) 
+      t2m(i,j)=t2m2(i,j) 
+      q2m(i,j)=q2m2(i,j) 
+      endif
+      enddo
+      enddo
+      deallocate(fieldNameList)
     endif
-    enddo
-    enddo
-    deallocate(fieldNameList)
+! 
+
 !BL2017 
     endif
 
+    !--- ocean fields input
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_height_lowest', zbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
@@ -5078,6 +5148,28 @@ module module_MEDIATOR
     call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_pres_height_lowest', pbot, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
+! 
+    if (.not. bulk_method_ori) then
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_v_wind_height10m', v10m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_temp_height2m', t2m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_spec_humid_height2m', q2m, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_zonal_moment_flx_atm', mtaux, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+      call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_merid_moment_flx_atm', mtauy, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+    endif
+! 
 
     !--- ocean fields input
     call FieldBundle_GetFldPtr(is_local%wrap%FBOcn_o, 'ocean_mask', mask, rc=rc)
@@ -5141,13 +5233,34 @@ module module_MEDIATOR
       ts1(1)    = ts(i,j)
 
       mask1(1)  = nint(mask(i,j))
-      call shr_flux_atmOcn(1         ,zbot1(1)  ,ubot1(1)  ,vbot1(1)  ,thbot1(1) ,   &
-                           qbot1(1)  ,rbot1(1)  ,tbot1(1)  ,us1(1)    ,vs1(1)    ,   &
-                           ts1(1)    ,mask1(1)  ,sen1(1)   ,lat1(1)   ,lwup1(1)  ,   &
-!                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1))
-!tcx include this for the time being to get over the initialization hump
-                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
-                           missval = 0.0_ESMF_KIND_R8  )
+! 
+      if (bulk_method_ori) then
+        call shr_flux_atmOcn(1         ,zbot1(1)  ,ubot1(1)  ,vbot1(1)  ,thbot1(1) ,   &
+                             qbot1(1)  ,rbot1(1)  ,tbot1(1)  ,us1(1)    ,vs1(1)    ,   &
+                             ts1(1)    ,mask1(1)  ,sen1(1)   ,lat1(1)   ,lwup1(1)  ,   &
+  !                           evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1))
+  !tcx include this for the time being to get over the initialization hump
+                             evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
+                             missval = 0.0_ESMF_KIND_R8  )
+      else
+        if(pbot(i,j) .gt. 0.0) &
+        th2m1(1) = t2m(i,j)*((100000._ESMF_KIND_R8/pbot(i,j))**0.286_ESMF_KIND_R8)  ! tcx temporary, assume p2m and pbot
+        u10m1(1)  = u10m(i,j)
+        v10m1(1)  = v10m(i,j)
+        t2m1(1)   = t2m(i,j) 
+        q2m1(1)   = q2m(i,j) 
+        mtaux1(1) = mtaux(i,j)
+        mtauy1(1) = mtauy(i,j)
+  
+        call shr_flux_atmOcn_bf(1   ,u10m1(1)  ,v10m1(1)  ,t2m1(1) ,th2m1(1)  ,q2m1(1)  ,  &
+                            zbot1(1),  rbot1(1)  ,thbot1(1)  ,tbot1(1)  ,qbot1(1) ,  &
+                            us1(1)    ,vs1(1)    ,ts1(1)    ,mask1(1)  ,  &
+                            sen1(1)   ,lat1(1)   ,lwup1(1)  ,  &
+                            evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
+                            missval = 0.0_ESMF_KIND_R8  )
+      endif
+! 
+
       sen(i,j)    = sen1(1)
       lat(i,j)    = lat1(1)
       lwup(i,j)   = lwup1(1)
@@ -5474,6 +5587,7 @@ module module_MEDIATOR
     allocate(wgtm01(lbound(icewgt,1):ubound(icewgt,1),lbound(icewgt,2):ubound(icewgt,2)))
     do j=lbound(icewgt,2),ubound(icewgt,2)
     do i=lbound(icewgt,1),ubound(icewgt,1)
+
 #ifndef FV3_CPLD
 ! DATM uses mediator aoflux calc in icy water
       atmwgt(i,j)  = 1.0_ESMF_KIND_R8 - icewgt(i,j)
@@ -5481,7 +5595,7 @@ module module_MEDIATOR
       icewgt1(i,j) = icewgt(i,j)
       wgtp01(i,j)  = 0.0_ESMF_KIND_R8
       wgtm01(i,j)  = 0.0_ESMF_KIND_R8
-! DATM uses atm fluxes in non-icy water
+! DATM uses mediator aoflux calc in non-icy water
       if (atmocn_flux_from_atm .and. icewgt(i,j) <= 0.0_ESMF_KIND_R8) then
         atmwgt1(i,j) = 1.0_ESMF_KIND_R8
         icewgt1(i,j) = 0.0_ESMF_KIND_R8
