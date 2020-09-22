@@ -5072,6 +5072,7 @@ module module_MEDIATOR
       enddo
       deallocate(fieldNameList)
     else
+       write(msgString,*) 'DBG_NEMS_MED_1' 
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=__FILE__)) return  ! bail out
@@ -5117,6 +5118,7 @@ module module_MEDIATOR
       enddo
       enddo
       deallocate(fieldNameList)
+       write(msgString,*) 'DBG_NEMS_MED_2' 
     endif
 ! 
 
@@ -5150,6 +5152,8 @@ module module_MEDIATOR
       line=__LINE__, file=__FILE__)) return  ! bail out
 ! 
     if (.not. bulk_method_ori) then
+
+       write(msgString,*) 'DBG_NEMS_MED_3' 
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'inst_u_wind_height10m', u10m, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=__FILE__)) return  ! bail out
@@ -5168,6 +5172,7 @@ module module_MEDIATOR
       call FieldBundle_GetFldPtr(is_local%wrap%FBAtm_o, 'mean_merid_moment_flx_atm', mtauy, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
+       write(msgString,*) 'DBG_NEMS_MED_4' 
     endif
 ! 
 
@@ -5243,6 +5248,7 @@ module module_MEDIATOR
                              evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
                              missval = 0.0_ESMF_KIND_R8  )
       else
+       write(msgString,*) 'DBG_NEMS_MED_5' 
         if(pbot(i,j) .gt. 0.0) &
         th2m1(1) = t2m(i,j)*((100000._ESMF_KIND_R8/pbot(i,j))**0.286_ESMF_KIND_R8)  ! tcx temporary, assume p2m and pbot
         u10m1(1)  = u10m(i,j)
@@ -5258,6 +5264,7 @@ module module_MEDIATOR
                             sen1(1)   ,lat1(1)   ,lwup1(1)  ,  &
                             evap1(1)  ,taux1(1)  ,tauy1(1)  ,tref1(1)  ,qref1(1)  ,duu10n1(1), &
                             missval = 0.0_ESMF_KIND_R8  )
+       write(msgString,*) 'DBG_NEMS_MED_6' 
       endif
 ! 
 
